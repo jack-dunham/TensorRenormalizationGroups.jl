@@ -298,8 +298,8 @@ function testctmrg(data_func; T=Float64)
     )
     # alg = VUMPS(; bonddim=20, verbose=true, maxiter=1)
 
-    X = TensorMap(randn, T, s, s)
-    Y = TensorMap(randn, T, s, s)
+    X = randn(T, s, s)
+    Y = randn(T, s, s)
     X = one(X)
     Y = one(Y)
 

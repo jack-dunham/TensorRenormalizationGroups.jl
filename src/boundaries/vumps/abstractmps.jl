@@ -106,7 +106,7 @@ end
 
 function MPS(f, T, D::AbstractUnitCell, right_bonds::AbstractUnitCell)
     left_bonds = circshift(right_bonds, (1, 0))
-    data_lat = @. TensorMap(f, T, D, right_bonds * adjoint(left_bonds))
+    data_lat = @. f(T, D, right_bonds * adjoint(left_bonds))
     return MPS(data_lat)
 end
 
@@ -116,7 +116,7 @@ function MPS(A::AbstractUnitCell)
     T = scalartype(A)
 
     AL = similar.(A)
-    C = @. TensorMap(rand, T, one(bonds), bonds * adjoint(bonds)) # R * L
+    C = @. rand(T, one(bonds), bonds * adjoint(bonds)) # R * L
     AR = similar.(A)
 
     mixedgauge!(AL, C, AR, A)

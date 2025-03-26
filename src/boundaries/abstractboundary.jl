@@ -28,7 +28,7 @@ function boundaryerror!(S_old::AbstractMatrix, C_new::AbstractMatrix)
 end
 
 function boundaryerror(c_new::AbstractTensorMap)
-    _, s_new, _ = tsvd(c_new, (1,), (2,))
+    _, s_new, _ = tsvd(c_new, ((1,), (2,)))
     normalize!(s_new)
     return s_new
 end

@@ -40,7 +40,7 @@ function initfixedpoint(f, mps, bulk, leftright::Symbol)
     cod = virtualspace(bulk, bulkind)
     dom = domain(mps)[mpsind]' * domain(mps)[mpsind]
 
-    return TensorMap(f, promote_type(scalartype(mps), scalartype(bulk)), cod, dom)
+    return f(promote_type(scalartype(mps), scalartype(bulk)), cod, dom)
 end
 
 function renorm(cb, ca, fl, fr)

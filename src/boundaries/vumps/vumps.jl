@@ -75,7 +75,7 @@ function KrylovKit.initialize(network, alg::VUMPS)
     fixed_points = FixedPoints(randn, boundary_mps, network)
 
     svals = broadcast(getbond(boundary_mps)) do bond
-        _, s, _, info = tsvd(bond, (1,), (2,))
+        _, s, _, _ = tsvd(bond, ((1,), (2,)))
         return s
     end
 
@@ -220,7 +220,7 @@ function updateleft!(al::AbstractTensorMap, ac::AbstractTensorMap, c::AbstractTe
     normalize!(rac)
     normalize!(rc)
 
-    mulbond!(al, qac, permute((qc'), (), (2, 1)))
+    mulbond!(al, qac, permute((qc'), ((), (2, 1))))
     errL = norm(rac - rc)
 
     return errL
@@ -239,7 +239,7 @@ function updateright!(ar::AbstractTensorMap, ac::AbstractTensorMap, c::AbstractT
     normalize!(lac)
     normalize!(lc)
 
-    mulbond!(ar, permute((qc'), (), (2, 1)), qac)
+    mulbond!(ar, permute((qc'), ((), (2, 1))), qac)
     errR = norm(lac - lc)
 
     return errR

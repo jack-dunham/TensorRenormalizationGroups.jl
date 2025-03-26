@@ -79,7 +79,7 @@ function initcorners(network, chi::S; randinit::Bool=false) where {S<:IndexSpace
             cout = TensorMap{T}(undef, one(S), chis[i] * chis[i])
 
             if randinit
-                randnt!(cout)
+                randn!(cout)
             else
                 tenp = rotate(site, -i + 1)
                 init_single_corner!(cout, tenp)
@@ -172,7 +172,7 @@ function initedges(network, chi::IndexSpace; randinit::Bool=false)
             eout = TensorMap{T}(undef, d, chi * chi')
 
             if randinit
-                randnt!(eout)
+                randn!(eout)
             else
                 init_single_edge!(eout, tenp)
             end
@@ -301,7 +301,7 @@ function randomize_if_zero!(uc, type, i, ind)
     ten = uc[ind]
     if ten ≈ zero(ten) || isnan(norm(ten)) || isinf(norm(ten))
         @info "Ill-conditioned tensor $type$i at site $(Tuple(ind)); using a random tensor instead."
-        randnt!(ten)
+        randn!(ten)
     end
     return uc
 end

@@ -98,14 +98,14 @@ function permutedom!(tdst, tsrc::AbsTen{N,M}, p::NTuple{M,Int}) where {N,M}
 end
 
 function _leftorth(t::AbsTen{N,2}) where {N}
-    Q, R = leftorth(t, tuple(1:N..., N + 2)::NTuple{N + 1,Int}, (N + 1,))
+    Q, R = leftorth(t, (tuple(1:N..., N + 2)::NTuple{N + 1,Int}, (N + 1,)))
     t_out = permute(Q, (Tuple(1:N)::NTuple{N,Int}, (N + 2, N + 1)))
     r_out = permute(R, ((), (2, 1)))
     return t_out, r_out
 end
 
 function _rightorth(t::AbsTen{N,2}) where {N}
-    L, Q = rightorth(t, (N + 2,), tuple(1:N..., N + 1)::NTuple{N + 1,Int})
+    L, Q = rightorth(t, ((N + 2,), tuple(1:N..., N + 1)::NTuple{N + 1,Int}))
     t_out = permute(Q, (Tuple(2:(N + 1))::NTuple{N,Int}, (N + 2, 1)))
     l_out = permute(L, ((), (2, 1)))
     return l_out, t_out
@@ -202,5 +202,3 @@ get_removal_isometry(bond) = get_embedding_isometry(bond, one(bond))
         $(assignments...)
     end
 end
-
-randnt!(t) = copy!(t, TensorMap(randn, scalartype(t), codomain(t), domain(t)))
