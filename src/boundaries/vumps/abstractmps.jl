@@ -42,6 +42,13 @@ Base.size(mps::AbstractMPS) = size(getcentral(mps))
 Base.length(mps::AbstractMPS) = size(mps)[2]
 Base.similar(mps::M) where {M<:MPS} = MPS(similar.(unpack(mps))...)::M
 
+function TensorKit.rand!(mps::MPS)
+    AL, C, AR, AC = unpack(mps)
+    rand!.(AC)
+    mixedgauge!(AL, C, AR, AC)
+    return mps
+end
+
 function Base.getindex(mps::AbstractMPS, y::Int)
     AL, C, AR, AC = unpack(mps)
     @views begin

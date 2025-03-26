@@ -203,7 +203,7 @@ end
 
 function step!(problem::RenormalizationProblem{<:TRG})
     runtime = problem.runtime
-    alg = problem.algorithm
+    alg = problem.alg
 
     p = 1 + problem.info.iterations
 

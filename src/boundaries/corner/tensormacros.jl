@@ -31,7 +31,7 @@ function _projectcorner!(c_dst, c_src, t::AbsTen{2,2}, uv)
 end
 
 function projectedge(t, m, u, v)
-    coddst = domain(m, 1)'
+    coddst = reverse(ProductSpace(virtualspace(m, 1))')
     domdst = domain(v, 1) * domain(u, 1)
     tdst = similar(t, coddst, domdst)
     return projectedge!(tdst, t, m, u, v)

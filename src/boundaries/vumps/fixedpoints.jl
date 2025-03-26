@@ -194,18 +194,28 @@ function normalize_fixed_points!(FL, FR, C1, C2)
 end
 # FL[x] * T[x] = FL[x + 1]
 function leftsolve(f0, Ts)
-    f_new = f0
+    fnew = f0
+
     for T in Ts
-        f_new = f_new * T
+        cod, dom = rightspace(T)
+        fold = fnew
+        fnew = similar(fnew, cod, dom)
+        multransfer!(fnew, fold, T)
     end
-    return f_new
+
+    return fnew
 end
 function rightsolve(f0, Ts)
-    f_new = f0
+    fnew = f0
+
     for T in reverse(Ts)
-        f_new = T * f_new
+        cod, dom = leftspace(T)
+        fold = fnew
+        fnew = similar(fnew, cod, dom)
+        multransfer!(fnew, T, fold)
     end
-    return f_new
+
+    return fnew
 end
 
 # This needs updated

@@ -43,7 +43,17 @@ struct VUMPSRuntime{
 end
 
 function reset!(runtime::VUMPSRuntime, network)
-    fixedpoints!(runtime.fixedpoints, runtime.mps, network)
+    # rand!(runtime.mps)
+    #
+    # FL = runtime.fixedpoints.left
+    # FR = runtime.fixedpoints.left
+    #
+    # rand!.(FL)
+    # rand!.(FR)
+    #
+    #
+
+    # fixedpoints!(runtime.fixedpoints, runtime.mps, network)
     return runtime
 end
 
@@ -196,14 +206,14 @@ end
 # EFFECTIVE HAMILTONIANS
 
 function applyhac(z, FL::AbstractVector, FR::AbstractVector, M::AbstractVector)
-    rv = map(copy, circshift(z, -1))
+    rv = map(similar, circshift(z, -1))
     applyhac!.(rv, z, FL, FR, M)
     rv = circshift(rv, 1)
     return rv
 end
 
 function applyhc(z, FL::AbstractVector, FR::AbstractVector)
-    rv = map(copy, circshift(z, -1))
+    rv = map(similar, circshift(z, -1))
     applyhc!.(rv, z, FL, FR)
     rv = circshift(rv, 1)
     return rv

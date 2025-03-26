@@ -17,7 +17,8 @@ function updatenetwork!(runtime::CornerMethodRuntime, network)
     updatenetwork!(runtime.permuted, permutedims(swapaxes(network)))
     map(runtime.svals) do sval
         broadcast(sval) do s
-            one!(s)
+            copy!(s, isometry(codomain(s), domain(s)))
+            # one!(s)
         end
     end
     return runtime
@@ -98,16 +99,11 @@ end
 function init_single_corner!(cout, ten::AbstractTensorMap{T,S}) where {T,S}
     d = virtualspace(ten)
 
-    # u1 = get_embedding_isometry(d[1], domain(cout)[1])
-    u1 = id(d[1])
-
-    # u2 = get_embedding_isometry(d[2], domain(cout)[2])
-    u2 = id(d[2])
+    u1 = get_embedding_isometry(d[1], domain(cout)[1])
+    u2 = get_embedding_isometry(d[2], domain(cout)[2])
 
     u3 = get_removal_isometry(d[3])
     u4 = get_removal_isometry(d[4])
-
-    cout = similar(ten, one(S), d[1] * d[2])
 
     corner = init_single_corner!(cout, ten, u1, u2, u3, u4)
 
@@ -192,14 +188,12 @@ end
 function init_single_edge!(eout, tenp)
     d = virtualspace(tenp)
 
-    # u1 = get_embedding_isometry(d[1], domain(eout)[1])
-    u1 = id(d[1])
+    u1 = get_embedding_isometry(d[1], domain(eout)[1])
+    # u1 = id(d[1])
     u2 = isometry(swap(d[2]), swap(d[2]))
-    # u3 = get_embedding_isometry(d[3], domain(eout)[2])
-    u3 = id(d[3])
+    u3 = get_embedding_isometry(d[3], domain(eout)[2])
+    # u3 = id(d[3])
     u4 = get_removal_isometry(d[4])
-
-    eout = similar(tenp, codomain(u2), d[1] * d[3])
 
     edge = init_single_edge!(eout, tenp, u1, u2, u3, u4)
 
