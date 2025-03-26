@@ -79,6 +79,11 @@ struct UnitCellStyle{G,A} <: AbstractUnitCellStyle{G,A} end
 @inline function Broadcast.BroadcastStyle(::Type{UnitCell{G,ElType,A}}) where {G,ElType,A}
     return UnitCellStyle{G,typeof(Broadcast.BroadcastStyle(A))}()
 end
+@inline function Broadcast.BroadcastStyle(
+    ::Type{<:AbstractUnitCell{G,ElType,A}}
+) where {G,ElType,A}
+    return UnitCellStyle{G,typeof(Broadcast.BroadcastStyle(A))}()
+end
 
 function Broadcast.BroadcastStyle(
     ::UnitCellStyle{G,A}, ::Broadcast.ArrayStyle{<:CircularArray{ElType,2,B}}
@@ -86,6 +91,7 @@ function Broadcast.BroadcastStyle(
     AB = Broadcast.BroadcastStyle(A(), Broadcast.BroadcastStyle(B))
     return UnitCellStyle{G,typeof(AB)}()
 end
+
 function Broadcast.BroadcastStyle(
     ::UnitCellStyle{SquareSymmetric}, G::Broadcast.DefaultArrayStyle{2}
 )
