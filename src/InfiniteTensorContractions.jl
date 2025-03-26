@@ -12,8 +12,8 @@ export ITC
 export AbstractUnitCellGeometry
 export AbstractUnitCell
 
-# InfiniteContraction
-export InfiniteContraction
+# RenormalizationProblem
+export RenormalizationProblem
 
 # ABSTRACT RUNTIMES
 export AbstractRuntime
@@ -39,9 +39,8 @@ export corners, edges
 
 export getboundary
 
-
 # INTERFACE
-export newcontraction, initialize, runcontraction!, runcontraction, contract
+export newrenormalization, initialize, renormalize!, renormalize, contract
 
 # No deps
 include("convergenceinfo.jl")
