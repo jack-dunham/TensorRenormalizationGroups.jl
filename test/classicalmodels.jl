@@ -80,9 +80,9 @@ end
             algs, (1e-3, 1e-6, 1e-9, 1e-3, 1e-6, 1e-9)
         )
             rt = @constinferred(initialize(zbulk, alg))
-            st = @constinferred(newcontraction(zbulk, rt; alg=alg))
+            st = @constinferred(newrenormalization(zbulk, rt; alg=alg))
 
-            runcontraction!(st)
+            renormalize!(st)
 
             z_val = @constinferred(contract(st.runtime, zbulk))
             m_val = contract(st.runtime, mtbulk) ./ z_val
@@ -101,9 +101,9 @@ end
             trgalgs, (1e-2, 1e-3, 1e-4)
         )
             rt = @constinferred(initialize(zbulk, alg))
-            st = @constinferred(newcontraction(zbulk, rt; alg=alg))
+            st = @constinferred(newrenormalization(zbulk, rt; alg=alg))
 
-            runcontraction!(st)
+            renormalize!(st)
 
             z_val = st.runtime.cumsum
 
