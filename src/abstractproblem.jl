@@ -23,6 +23,10 @@ A new instance of `RenormalizationProblem` is constructed by passing `network` a
 argument. If `initial` is specified, `convertproblem` will be called to attempt to make
 `initial` compatible with `alg`.
 
+Note, `RenormalizationProblem` will *always* be constructed using a `copy` of `network`, but
+*not* a `deepcopy`. That is, one can mutate the `network` struct using `setindex!` with
+out mutating the constructed `RenormalizationProblem`, but mutating the tensor elements 
+themselves *will* propagate through to this struct.
 """
 struct RenormalizationProblem{
     Alg<:AbstractAlgorithm,Net<:AbstractUnitCell,Run<:AbstractRuntime
@@ -43,7 +47,9 @@ struct RenormalizationProblem{
         info = ConvergenceInfo()
         runtime =
             isnothing(initial) ? initialize(network, alg) : convertproblem(Alg, initial)
-        return new{Alg,Net,typeof(runtime)}(alg, network, runtime, info, deepcopy(initial))
+        return new{Alg,Net,typeof(runtime)}(
+            alg, copy(network), runtime, info, deepcopy(initial)
+        )
     end
 end
 
@@ -185,6 +191,9 @@ function recycle!(problem::RenormalizationProblem, network)
     problem.info.converged = false
     problem.info.error = Inf
     problem.info.iterations = 0
+
+    problem.network .= copy(network)
+
     reset!(problem.runtime, network)
     return problem
 end
