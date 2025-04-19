@@ -160,7 +160,7 @@ function initedges(network, chi::IndexSpace; randinit::Bool=false)
         edges = broadcast(network) do site
             tenp = rotate(site, -i + 1)
 
-            # Need north bond of tensor below (swapped south bond)
+            # Need north bond of tensor below (south bond)
             d = swap(virtualspace(tenp)[2])
 
             T = scalartype(site)
@@ -170,7 +170,7 @@ function initedges(network, chi::IndexSpace; randinit::Bool=false)
             if randinit
                 randn!(eout)
             else
-                init_single_edge!(eout, tenp)
+                eout = init_single_edge!(eout, tenp)
             end
 
             normalize!(eout)
@@ -208,8 +208,10 @@ function init_single_edge!(t_dst, t_src::TensorMap, ue, us, uw, un)
     return __init_single_edge!(t_dst, t_src, ue, us, uw, un)
 end
 
-function __init_single_edge!(t_dst, t_src::AbsTen{0,4}, ue, us, uw, un)
-    @tensoropt t_dst[ss; o1 o2] = t_src[e s w n] * ue[e; o1] * us[ss; s] * uw[w; o2] * un[n]
+function __init_single_edge!(tdst, tsrc::AbsTen{0,4}, ue, us, uw, un)
+    @tensoropt tdst[s; o1 o2] := tsrc[e s w n] * ue[e; o1] * uw[w; o2] * un[n]
+    # @tensoropt t_dst[ss; o1 o2] = t_src[e s w n] * ue[e; o1] * us[ss; s] * uw[w; o2] * un[n]
+    return tdst
 end
 function __init_single_edge!(
     t_dst, t1::T1, t2::T2, ue, us, uw, un
