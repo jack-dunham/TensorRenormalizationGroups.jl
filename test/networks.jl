@@ -31,6 +31,11 @@
             3 1 2
         ]
 
+        A = Matrix{Vector{Float64}}(undef, 2, 2)
+
+        A[1, 1] = A[2, 2] = [2.0]
+        A[2, 1] = A[1, 2] = [3.0]
+
         ucsym = UnitCell{SquareSymmetric}([1, 2, 3])
 
         @test UnitCell{Square}(data) == ucsym
@@ -41,7 +46,22 @@
         for i in 1:3
             @test ucsym[i, :] == data[i, :]
             @test ucsym[:, i] == data[:, i]
+            @test ucsym[i, :] == ucsym[:, i]
+
+            @test ucsym[i, :] isa CircularVector
+            @test ucsym[:, i] isa CircularVector
+
+            @test ucsym[i, i] isa Int
         end
+
+        @test ucsym[1:2, 1] isa CircularVector
+        @test ucsym[1:3, 1:2] isa CircularMatrix
+
+        @test ucsym[1:3, 1:3] isa CircularMatrix
+
+        @test ucsym[CartesianIndex(1, 2)] == ucsym[1, 2]
+        @test ucsym[CartesianIndices((3, 1))] == ucsym[1:3, 1]
+        @test ucsym[CartesianIndices((2, 3))] == ucsym[1:2, 1:3]
 
         @test identity.(ucsym) == ucsym
         @test exp2.(ucsym) == UnitCell{SquareSymmetric}([2, 4, 8])
@@ -56,5 +76,29 @@
         end
 
         @test ucsym == ucsym'
+
+        @test all(rmul!(copy(ucsym), 2) .== 2 * data)
+        @test all(rmul!.(UnitCell{SquareSymmetric}(deepcopy(A)), 2) .== 2 * A)
+
+        @test (zeros(Int, 3, 3) .= ucsym) == data
+
+        let uc = UnitCell{SquareSymmetric}([1 2; 2 1])
+            uc[1, 1] = 3
+
+            @test uc[1, 1] == 3
+            @test uc[2, 2] == 3
+
+            @test uc[1, 2] == 2
+            @test uc[2, 1] == 2
+        end
+        let uc = UnitCell{SquareSymmetric}([1 2; 2 1])
+            uc[1, 2] = 3
+
+            @test uc[1, 1] == 1
+            @test uc[2, 2] == 1
+
+            @test uc[1, 2] == 3
+            @test uc[2, 1] == 3
+        end
     end
 end
