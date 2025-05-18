@@ -123,9 +123,20 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
 
     network = ctmrg.network
 
-    for x in axes(network, 1)
-        for y in axes(network, 2)
-            # println(x,"",y)
+    if geometrytype(typeof(network)) == SquareSymmetric
+
+        # xax should be the short axes in this case
+
+        xax = axes(eachindex(network), 2)
+        yax = axes(eachindex(network), 1)
+    else
+        xax = axes(network, 1)
+        yax = axes(network, 2)
+    end
+
+    for x in xax
+        # Compute all the unique projectors
+        for y in yax
             UL[x + 0, y + 1], VL[x + 0, y + 1], UR[x + 3, y + 1], VR[x + 3, y + 1] = projectors(
                 C1[x + 0, y + 0],
                 C2[x + 3, y + 0],
@@ -147,7 +158,7 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
                 kwargs...,
             )
         end
-        for y in axes(network, 2)
+        for y in yax
             #=
               1
             C --- T ---
@@ -238,6 +249,9 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
             )
         end
     end
+
+    # @info "corner" norm.(ctmrg.corners)
+    # @info "edge" norm.(ctmrg.edges)
 
     normalize!(ctmrg.corners)
     normalize!(ctmrg.edges)

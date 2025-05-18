@@ -8,6 +8,14 @@ function projectcorner(c, t, p)
     cdst = similar(c, codomain(c), dstdom)
     return projectcorner!(cdst, c, t, p)
 end
+
+#=
+     1   3  2
+    C --- T ---
+    |2    |
+    *--V--*
+       |
+=#
 function projectcorner!(c_dst, c_src, t, uv)
     if c_dst === c_src
         c_copy = deepcopy(c_src)
@@ -19,6 +27,7 @@ function projectcorner!(c_dst, c_src, t, uv)
     # symmetrise_corner!(c_dst)
     return c_dst
 end
+
 function _projectcorner!(c_dst, c_src, t::AbsTen{1,2}, uv)
     # P: (x,D)<-(x_out)
     @tensoropt c_dst[h0 v0] = c_src[h1 v1] * t[v2; h0 h1] * uv[v1 v2; v0]

@@ -152,7 +152,7 @@ function vumpsupdate!(A::MPS, FP::FixedPoints, M; ishermitian=forcehermitian(A, 
         # @info "" normalize(1 / μ1s[1] * ACs[1][1])
         # @info "" (1 / μ1s[1] * ACs[1][1])
 
-        for y in ry
+        for y in axes(eachindex(C), 1)
             AC[x, y] = ACs[1][y]
         end
         # for y in ry
@@ -184,7 +184,7 @@ function vumpsupdate!(A::MPS, FP::FixedPoints, M; ishermitian=forcehermitian(A, 
                                                                                        μ0 =
             (μ1s[1] / μ0s[1])
 
-        for y in ry
+        for y in axes(eachindex(C), 1)
             C[x, y] = Cs[1][y]
         end
         # A[mod(y - 1, ry)].C[x] = Cs[1]

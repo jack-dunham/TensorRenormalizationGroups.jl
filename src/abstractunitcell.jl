@@ -51,8 +51,10 @@ UnitCell{SquareSymmetric}(vec::AbstractVector) = UnitCell{SquareSymmetric}(hcat(
 
 @inline getdata(uc::UnitCell{G,T,A}) where {G,T,A} = uc.data::CircularArray{T,2,A}
 
-@inline datatype(U::Type{<:AbstractUnitCell{G,ElType,A}}) where {G,ElType,A} = A
+@inline datatype(::Type{<:AbstractUnitCell{G,ElType,A}}) where {G,ElType,A} = A
 @inline datatype(U::Type) = U
+
+geometrytype(::Type{<:AbstractUnitCell{G}}) where {G} = G
 
 ## ABSTRACT ARRAY
 
@@ -114,13 +116,13 @@ function _getindex(G::Type{SquareSymmetric}, uc::AbstractUnitCell, i1, i2)
         rv = mapreduce((x...) -> cat(x...; dims=d), i1) do i
             return getindex(circshift(basedata(uc), -(i - 1)), i2)
         end
-        return maybe2circular(rv)
+        return maybe2circular(eltype(uc), rv)
     end
 end
 
-maybe2circular(num::Number) = num
-maybe2circular(carr::CircularArray) = carr
-maybe2circular(arr::AbstractArray) = CircularArray(arr)
+maybe2circular(::Type{T}, val::T) where {T} = val
+maybe2circular(::Type{T}, arr::CircularArray{T}) where {T} = arr
+maybe2circular(::Type{T}, arr::AbstractArray{T}) where {T} = CircularArray(arr)
 
 ## 
 
@@ -268,9 +270,7 @@ function Broadcast.broadcasted(
     return _remove_symmetry(A)
 end
 function Broadcast.broadcasted(
-    ::UnitCellStyle{SquareSymmetric},
-    ::typeof(identity),
-    A::UnitCell{SquareSymmetric},
+    ::UnitCellStyle{SquareSymmetric}, ::typeof(identity), A::UnitCell{SquareSymmetric}
 )
     return _remove_symmetry(A)
 end

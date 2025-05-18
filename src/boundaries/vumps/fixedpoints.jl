@@ -105,7 +105,7 @@ function fixedpoints!(
 
     Nx, Ny = size(C)
 
-    for y in 1:Ny
+    for y in axes(eachindex(C), 2)
         left, Ls, linfo = eigsolve(
             z -> leftsolve(z, tm_left[:, y]),
             FL[1, y],

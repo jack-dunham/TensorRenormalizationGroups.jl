@@ -30,11 +30,28 @@
             2 3 1
             3 1 2
         ]
+        @testset "mutable elements" verbose = true begin
+            A = Matrix{Vector{Float64}}(undef, 2, 2)
 
-        A = Matrix{Vector{Float64}}(undef, 2, 2)
+            A[1, 1] = A[2, 2] = [2.0]
+            A[2, 1] = A[1, 2] = [3.0]
 
-        A[1, 1] = A[2, 2] = [2.0]
-        A[2, 1] = A[1, 2] = [3.0]
+            newuc = () -> begin
+                uc = UnitCell{SquareSymmetric}(deepcopy(A))
+            end
+
+            uc = newuc()
+            rmul!(uc, 2)
+            @test all(uc .== 2 * A)
+
+            uc = newuc()
+            rmul!.(uc, 2)
+            @test all(uc .== 2 * A)
+
+            uc = newuc()
+            uc .= uc .+ uc
+            @test all(uc .== 2 * A)
+        end
 
         ucsym = UnitCell{SquareSymmetric}([1, 2, 3])
 
@@ -42,6 +59,13 @@
 
         @test ucsym == UnitCell{SquareSymmetric}([1 2 3])
         @test ucsym == UnitCell{SquareSymmetric}([1; 2; 3;;])
+
+        # Is symmetric
+        @test permutedims(ucsym) == ucsym
+        # But permute dims should make a copy
+        @test !(permutedims(ucsym) === ucsym)
+        # The data should remain unchanged however so that second axis always has dim 1
+        @test permutedims(ucsym).data == ucsym.data
 
         for i in 1:3
             @test ucsym[i, :] == data[i, :]
@@ -78,7 +102,6 @@
         @test ucsym == ucsym'
 
         @test all(rmul!(copy(ucsym), 2) .== 2 * data)
-        @test all(rmul!.(UnitCell{SquareSymmetric}(deepcopy(A)), 2) .== 2 * A)
 
         @test (zeros(Int, 3, 3) .= ucsym) == data
 

@@ -23,7 +23,7 @@ export AbstractBoundaryRuntime, AbstractGrainingRuntime
 export AbstractAlgorithm
 export AbstractBoundaryAlgorithm, AbstractGrainingAlgorithm
 
-export Square
+export Square, SquareSymmetric
 export UnitCell
 export CompositeTensor, virtualspace, swapaxes, invertaxes
 

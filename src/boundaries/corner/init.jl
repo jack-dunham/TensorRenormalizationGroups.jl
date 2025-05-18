@@ -51,13 +51,13 @@ function initpermuted(tensors::CornerMethodTensors)
 
     # Then permute the indices of each tensor on the lattice:
     cs = map(transposed_corners) do c
-        broadcast(c) do t
-            return permute(t, ((), (2, 1)))
+        return broadcast(c) do t
+            return permutedom(t, (2, 1))
         end
     end
 
     # The order of the tensors needs adjusted such that they appear in the correct place
-    corners = Corners(cs[1], cs[4], cs[3], cs[2])
+    corners = Corners((cs[1], cs[4], cs[3], cs[2]))
     edges = Edges(reverse(transposed_edges))
 
     # Need to swap the axes bonds and transpose the network
@@ -269,7 +269,7 @@ function initerror(corners::Corners)
     # Permute into some form compatible with tsvd
     svals = map(corners) do corn
         broadcast(corn) do site
-            s =  permute(site, ((1,), (2,)))
+            s = permute(site, ((1,), (2,)))
             return TensorMap(rand, scalartype(s), codomain(s), domain(s))
             # _, rv, _ = tsvd(permute(site, ((1,), (2,))))
             # return rv
