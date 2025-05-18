@@ -99,18 +99,20 @@ function newrenormalization(network, initial_runtime; alg, store_initial=true, v
     return prob
 end
 
-function _run!(callback, problem::RenormalizationProblem; verbose=true)
+function _run!(callback, problem::RenormalizationProblem)
     info = problem.info
     alg = problem.alg
 
-    verbose && @info "Running algorithm:" algorithm = alg
+    @info "Running algorithm:" algorithm = alg
 
     while info.iterations < alg.maxiter && info.error ≥ alg.tol
         info.error = step!(problem)
 
         info.iterations += 1
 
-        verbose && @info "Convergence ≈ $(info.error) after $(info.iterations) iterations."
+        if alg.verbose
+            @info "Convergence ≈ $(info.error) after $(info.iterations) iterations."
+        end
 
         callback(problem)
     end
@@ -118,13 +120,11 @@ function _run!(callback, problem::RenormalizationProblem; verbose=true)
 
     info.finished = true
 
-    verbose && begin
-        @info "Convergence: $(info.error)"
-        if info.converged
-            @info "Algorithm convergenced to within tolerance $(alg.tol) after $(info.iterations) iterations"
-        else
-            @warn "Algorithm did not convergence to within $(alg.tol) after $(info.iterations) iterations"
-        end
+    @info "Convergence: $(info.error)"
+    if info.converged
+        @info "Algorithm convergenced to within tolerance $(alg.tol) after $(info.iterations) iterations"
+    else
+        @warn "Algorithm did not convergence to within $(alg.tol) after $(info.iterations) iterations"
     end
 
     return info.finished
