@@ -25,6 +25,7 @@ export AbstractBoundaryAlgorithm, AbstractGrainingAlgorithm
 
 export Square, SquareSymmetric
 export UnitCell
+export tensortype
 export CompositeTensor, virtualspace, swapaxes, invertaxes
 
 # ALGORITHMS

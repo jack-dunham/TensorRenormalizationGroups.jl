@@ -7,6 +7,11 @@ basedata(arr::AbstractUnitCell) = basedata(getdata(arr))
 
 const AbUnCe{T,G,A} = AbstractUnitCell{G,T,A}
 
+tensortype(val) = tensortype(typeof(val))
+tensortype(args::Type) = throw(MethodError(tensortype, (args, )))
+tensortype(T::Type{<:AbstractTensorMap}) = T
+tensortype(::Type{<:AbUnCe{T}}) where {T} = tensortype(T)
+
 struct Square <: AbstractUnitCellGeometry end
 struct SquareSymmetric <: AbstractUnitCellGeometry end
 
