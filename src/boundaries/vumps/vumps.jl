@@ -114,9 +114,8 @@ function vumpsstep!(vumps::VUMPSRuntime, network; kwargs...)
     mps = vumps.mps
     fps = vumps.fixedpoints
 
-    vumpsupdate!(mps, fps, network; kwargs...) # Vectorised
-
     fixedpoints!(fps, mps, network; kwargs...)
+    vumpsupdate!(mps, fps, network; kwargs...) # Vectorised
 
     return vumps
 end
