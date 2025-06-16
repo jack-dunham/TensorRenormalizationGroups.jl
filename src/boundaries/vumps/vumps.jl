@@ -1,7 +1,7 @@
 """
     VUMPS <: AbstractBoundaryAlgorithm
 
-Stores the parameters for the variational uniform matrix product state (VUMPS)  boundary algorithm. 
+Stores the parameters for the variational uniform matrix product state (VUMPS) boundary algorithm. 
 
 # Fields
 - `bonddim::Int`: the bond dimension of the boundary

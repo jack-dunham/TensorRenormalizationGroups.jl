@@ -107,22 +107,10 @@ function fixedpoints!(
 
     for y in axes(eachindex(C), 2)
         left, Ls, linfo = eigsolve(
-            z -> leftsolve(z, tm_left[:, y]),
-            FL[1, y],
-            1,
-            :LM;
-            ishermitian=ishermitian,
-            eager=true,
-            maxiter=1,
+            z -> leftsolve(z, tm_left[:, y]), FL[1, y], 1, :LM; eager=true
         )
         right, Rs, rinfo = eigsolve(
-            z -> rightsolve(z, tm_right[:, y]),
-            FR[Nx, y],
-            1,
-            :LM;
-            ishermitian=ishermitian,
-            eager=true,
-            maxiter=1,
+            z -> rightsolve(z, tm_right[:, y]), FR[Nx, y], 1, :LM; eager=true
         )
 
         FL[1, y] = Ls[1]

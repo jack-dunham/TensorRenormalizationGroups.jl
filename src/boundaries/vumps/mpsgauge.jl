@@ -34,11 +34,10 @@ function leftgauge!(
 
     # Tp = permute(T, (4, 2), (3, 1))
 
-    λs, Ls, info =
-        KrylovKit.eigsolve(L[end], 1, :LM; ishermitian=false, eager=true, maxiter=1) do x0
-            x1 = similar(x0)
-            @tensoropt x1[ur dr] = x0[ul dl] * T[dr dl; ur ul]
-        end
+    λs, Ls, info = KrylovKit.eigsolve(L[end], 1, :LM; ishermitian=false, eager=true) do x0
+        x1 = similar(x0)
+        @tensoropt x1[ur dr] = x0[ul dl] * T[dr dl; ur ul]
+    end
 
     Lp = permute(Ls[1], ((1,), (2,)))
 
