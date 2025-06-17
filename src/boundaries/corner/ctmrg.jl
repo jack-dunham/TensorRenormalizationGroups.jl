@@ -68,7 +68,7 @@ function projectors(
     # Top
     top = halfcontract(C1_00, T1_10, T1_20, C2_30, T4_01, M_11, M_21, T2_31)
     # println(top)
-    U, S, V = tsvd!(top; alg=svd_alg)
+    U, S, V = tsvd!(normalize!(top); alg=svd_alg)
     FUL = sqrt(S) * V
     FUR = U * sqrt(S)
 
@@ -77,7 +77,7 @@ function projectors(
     MP_22 = invertaxes(M_22)
 
     bot = halfcontract(C3_33, T3_23, T3_13, C4_03, T2_32, MP_22, MP_12, T4_02)
-    U, S, V = tsvd!(bot; alg=svd_alg)
+    U, S, V = tsvd!(normalize!(bot); alg=svd_alg)
     FDL = U * sqrt(S)
     FDR = sqrt(S) * V
 
@@ -129,9 +129,16 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
 
         xax = axes(eachindex(network), 2)
         yax = axes(eachindex(network), 1)
+
+        C1o, C2o, C3o, C4o = map(copy, ctmrg.corners)
+        T1o, T2o, T3o, T4o = map(copy, ctmrg.edges)
+
     else
         xax = axes(network, 1)
         yax = axes(network, 2)
+
+        C1o, C2o, C3o, C4o = ctmrg.corners
+        T1o, T2o, T3o, T4o = ctmrg.edges
     end
 
     for x in xax
@@ -158,6 +165,7 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
                 kwargs...,
             )
         end
+
         for y in yax
             #=
               1
@@ -170,7 +178,7 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
             #     C1[x + 1, y + 0], C1[x + 0, y + 0], T1[x + 1, y + 0], VL[x + 0, y + 0]
             # )
             C1[x + 1, y + 0] = projectcorner(
-                C1[x + 0, y + 0], T1[x + 1, y + 0], VL[x + 0, y + 0]
+                C1o[x + 0, y + 0], T1o[x + 1, y + 0], VL[x + 0, y + 0]
             )
             #=
                     1
@@ -186,14 +194,14 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
             #     VR[x + 3, y + 0],
             # )
             C2[x + 2, y + 0] = projectcorner(
-                C2[x + 3, y + 0], swapvirtual(T1[x + 2, y + 0]), VR[x + 3, y + 0]
+                C2o[x + 3, y + 0], swapvirtual(T1o[x + 2, y + 0]), VR[x + 3, y + 0]
             )
 
             # projectcorner!(
             #     C3[x + 2, y + 3], C3[x + 3, y + 3], T3[x + 2, y + 3], UR[x + 3, y + 2]
             # )
             C3[x + 2, y + 3] = projectcorner(
-                C3[x + 3, y + 3], T3[x + 2, y + 3], UR[x + 3, y + 2]
+                C3o[x + 3, y + 3], T3o[x + 2, y + 3], UR[x + 3, y + 2]
             )
             # projectcorner!(
             #     C4[x + 1, y + 3],
@@ -202,7 +210,7 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
             #     UL[x + 0, y + 2],
             # )
             C4[x + 1, y + 3] = projectcorner(
-                C4[x + 0, y + 3], swapvirtual(T3[x + 1, y + 3]), UL[x + 0, y + 2]
+                C4o[x + 0, y + 3], swapvirtual(T3o[x + 1, y + 3]), UL[x + 0, y + 2]
             )
             #=
                |
@@ -221,7 +229,7 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
             #     VL[x + 0, y + 1],
             # )
             T4[x + 1, y + 1] = projectedge(
-                T4[x + 0, y + 1], network[x + 1, y + 1], UL[x + 0, y + 0], VL[x + 0, y + 1]
+                T4o[x + 0, y + 1], network[x + 1, y + 1], UL[x + 0, y + 0], VL[x + 0, y + 1]
             )
             #=
                    |
@@ -241,7 +249,7 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
             #     UR[x + 3, y + 0],
             # )
             T2[x + 2, y + 1] = projectedge(
-                T2[x + 3, y + 1],
+                T2o[x + 3, y + 1],
                 invertaxes(network[x + 2, y + 1]),
                 # flipaxis(network[x + 2, y + 1]),
                 VR[x + 3, y + 1],
@@ -276,55 +284,64 @@ function contract(ctmrg::CornerMethodTensors, network, i1::UnitRange, i2::UnitRa
     return _contractall(cs..., es..., network)
 end
 
-function testctmrg(data_func; T=Float64)
+function testctmrg(data_func; T=Float64, D=10)
     βc = log(1 + sqrt(2)) / 2
 
     s = ℂ^2
 
-    N = 1
+    N = 4
 
     network =
-        x -> UnitCell(fill(TensorMap(T.(data_func(x)[1]), one(s), s * s * s' * s'), N, N))
+        x -> UnitCell{SquareSymmetric}(
+            fill(TensorMap(T.(data_func(x)[1]), one(s), s * s * s' * s'), N, N)
+        )
     network_magn =
-        x -> UnitCell(fill(TensorMap(T.(data_func(x)[2]), one(s), s * s * s' * s'), N, N))
+        x -> UnitCell{SquareSymmetric}(
+            fill(TensorMap(T.(data_func(x)[2]), one(s), s * s * s' * s'), N, N)
+        )
 
     rv = []
     rv_exact = []
 
-    algc = CTMRG(;
-        bonddim=10,
+    alg = CTMRG(;
+        bonddim=D,
         verbose=true,
-        maxiter=500,
-        tol=1e-11,
+        maxiter=1000,
+        tol=1e-10,
         svdalg=TensorKit.SVD(),
         randinit=false,
     )
-    algf = FPCM(; bonddim=10, verbose=true, maxiter=50, tol=1e-11, randinit=true)
+    # alg = FPCM(; bonddim=D, verbose=true, maxiter=500, tol=1e-11, randinit=false)
+    #
+    # # alg = algf
+    # alg = HybridCornerMethod(;
+    #     bonddim=10,
+    #     maxiter=100,
+    #     randinit=false,
+    #     ctmrg=algc,
+    #     fpcm=algf,
+    #     dofpcm=AtFrequency(5),
+    # )
+    # alg = VUMPS(; bonddim=D, verbose=true, maxiter=200)
 
-    # alg = algf
-    alg = HybridCornerMethod(;
-        bonddim=10,
-        maxiter=100,
-        randinit=false,
-        ctmrg=algc,
-        fpcm=algf,
-        dofpcm=AtFrequency(5),
-    )
-    # alg = VUMPS(; bonddim=20, verbose=true, maxiter=1)
+    # randgauge! =
+    #     (p, X, Y) -> @tensoropt p[a b c d] =
+    #         copy(p)[aa bb cc dd] * X[aa; a] * inv(X)[c; cc] * Y[bb; b] * inv(Y)[d; dd]
 
-    X = randn(T, s, s)
-    Y = randn(T, s, s)
-    X = one(X)
-    Y = one(Y)
+    for x in (1.1,)
+        b1 = network(x * βc)
+        b2 = network_magn(x * βc)
 
-    randgauge! =
-        (p, X, Y) -> @tensoropt p[a b c d] =
-            copy(p)[aa bb cc dd] * X[aa; a] * pinv(X)[c; cc] * Y[bb; b] * pinv(Y)[d; dd]
+        for y in axes(b1, 2)
+            for x in axes(b1, 1)
+                A, _, _ = tsvd(randn(T, s, s))
+                randgauge!(b1, x, y, one(A) + 1e-1 * A)
+                randgauge!(b2, x, y, one(A) + 1e-1 * A)
+            end
+        end
 
-    for x in 1.001
-        # b1 = network(x * βc)
-        b1 = randgauge!.(network(x * βc), Ref(X), Ref(Y))
-        b2 = randgauge!.(network_magn(x * βc), Ref(X), Ref(Y))
+        # b1 = randgauge!.(network(x * βc), Ref(X), Ref(Y))
+        # b2 = randgauge!.(network_magn(x * βc), Ref(X), Ref(Y))
         if x < 1.0
             M = 0.0
         else
@@ -339,8 +356,8 @@ function testctmrg(data_func; T=Float64)
 
         renormalize!(state)
 
-        Z = contract(state.runtime.primary, b1)
-        magn = contract(state.runtime.primary, b2) ./ Z
+        Z = contract(state.runtime, b1)
+        magn = contract(state.runtime, b2) ./ Z
 
         push!(rv, abs.(magn)[1, 1])
 
@@ -349,8 +366,21 @@ function testctmrg(data_func; T=Float64)
         push!(rv_exact, M)
     end
 
+    @info rv
+
     return abs.(rv - rv_exact)
 end
+
+function randgauge!(net, x, y, X)
+    p1 = net[x, y]
+    p2 = net[x + 1, y]
+
+    @tensoropt p1[a b c d] = copy(p1)[aa b c d] * X[aa; a]
+    @tensoropt p2[a b c d] = copy(p2)[a b cc d] * inv(X)[c; cc]
+
+    return nothing
+end
+
 function toric(p)
     distr = Dict("X" => p / 3, "Y" => p / 3, "Z" => p / 3, "I" => 1 - p)
 
