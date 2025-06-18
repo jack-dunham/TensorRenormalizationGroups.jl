@@ -26,8 +26,7 @@ struct CornerSingularValues{S<:AbstractUnitCell}
 end
 
 const FourTupleLike{A} = Union{Corners{A},Edges{A},CornerSingularValues{A},Projectors{A}}
-
-(T::Type{<:FourTupleLike})(args::Vararg{A,4}) where {A} = T(args)
+(::Type{T})(args::Vararg{A,4}) where {A,T<:FourTupleLike} = T(args)
 
 Base.length(::FourTupleLike) = 4
 Base.getindex(t::FourTupleLike, i::Int) = getindex(t.data, i)
