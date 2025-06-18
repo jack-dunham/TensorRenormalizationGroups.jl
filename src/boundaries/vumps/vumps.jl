@@ -1,18 +1,24 @@
 """
-    VUMPS <: AbstractBoundaryAlgorithm
+$(TYPEDEF)
 
 Stores the parameters for the variational uniform matrix product state (VUMPS) boundary algorithm. 
 
 # Fields
-- `bonddim::Int`: the bond dimension of the boundary
-- `maxiter::Int = 100`: maximum number of iterations
-- `tol::Float64 = 1e-12`: convergence tolerance
-- `verbose::Bool = true`: when true, will print algorithm convergence progress
+
+$(TYPEDFIELDS)
+
+# Constructor
+
+    $(FUNCTIONNAME)(; bonddim, maxiter=100, tol=1e-12, verbose=true)
 """
 @kwdef struct VUMPS <: AbstractBoundaryAlgorithm
+    "The bond dimension of the boundary."
     bonddim::Int
+    "Maximum number of iterations."
     maxiter::Int = 100
+    "Convergence tolerance."
     tol::Float64 = 1e-12
+    "When `true`, will print algorithm convergence progress."
     verbose::Bool = true
     function VUMPS(bonddim::Int, maxiter::Float64, tol::Float64, verbose::Bool)
         if maxiter == Inf
