@@ -1,21 +1,31 @@
 """
-    CTMRG{SVD<:OrthogonalFactorizationAlgorithm}
+$(TYPEDEF)
+
+Stores the parameters for the corner transfer matrix  renormalization group (CTMRG) 
+boundary algorithm.
 
 # Fields
-- `bonddim::Int`: the bond dimension of the boundary
-- `maxiter::Int = 100`: maximum number of iterations
-- `tol::Float64 = 1e-12`: convergence tolerance
-- `verbose::Bool = true`: when true, will print algorithm convergence progress
-- `ptol::Float64 = 1e-7`: tolerance used in the pseudoinverse
-- `svd_alg::SVD = TensorKit.SVD()`: algorithm used for the SVD. Either `TensorKit.SVD()` or `TensorKit.SDD()`
+
+$(TYPEDFIELDS)
+
+# Constructor
+
+    $(FUNCTIONNAME)(; bonddim, maxiter=100, tol=1e-12, verbose=true, ptol=5e-8, svdalg=TensorKit.SVD(), randinit=false)
 """
 @kwdef struct CTMRG{SVD<:OrthogonalFactorizationAlgorithm} <: AbstractCornerMethod
+    "The bond dimension of the boundary."
     bonddim::Int
+    "Maximum number of iterations."
     maxiter::Int = 100
+    "Convergence tolerance."
     tol::Float64 = 1e-12
+    "When `true`, will print algorithm convergence progress."
     verbose::Bool = true
+    "Tolerance used in the pseudoinverse."
     ptol::Float64 = 5e-8
+    "Algorithm used for the SVD. Either `TensorKit.SVD()` or `TensorKit.SDD()`."
     svdalg::SVD = TensorKit.SVD()
+    "If `true`, intialize with random tensors."
     randinit::Bool = false
 end
 

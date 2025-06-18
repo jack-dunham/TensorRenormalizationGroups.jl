@@ -4,10 +4,27 @@ struct TRGRuntime{AType,SType} <: AbstractGrainingRuntime
     cumsum::Matrix{Float64}
 end
 
-@kwdef struct TRG{T} <: AbstractAlgorithm
+"""
+$(TYPEDEF)
+
+Stores the parameters for the tensor renormalization group (TRG) coarse graining algorithm.
+
+# Fields
+
+$(TYPEDFIELDS)
+
+# Constructor
+
+    $(FUNCTIONNAME)(; trunc, maxiter=20, tol=1e-12, verbose=true)
+"""
+@kwdef struct TRG{T<:TruncationScheme} <: AbstractAlgorithm
+    "The `TruncationScheme` used during the SVD step. See `TensorKit.TruncationScheme` and `TensorKit.tsvd` for more details."
     trunc::T
+    "Maximum number of iterations."
     maxiter::Int = 20
+    "Convergence tolerance."
     tol::Float64 = 1e-12
+    "When `true`, will print algorithm convergence progress."
     verbose::Bool = true
 end
 
