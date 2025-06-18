@@ -8,7 +8,7 @@ basedata(arr::AbstractUnitCell) = basedata(getdata(arr))
 const AbUnCe{T,G,A} = AbstractUnitCell{G,T,A}
 
 tensortype(val) = tensortype(typeof(val))
-tensortype(args::Type) = throw(MethodError(tensortype, (args, )))
+tensortype(args::Type) = throw(MethodError(tensortype, (args,)))
 tensortype(T::Type{<:AbstractTensorMap}) = T
 tensortype(::Type{<:AbUnCe{T}}) where {T} = tensortype(T)
 
@@ -109,6 +109,11 @@ function _getindex(G::Type{SquareSymmetric}, uc::AbstractUnitCell, i)
     cartind = inds[i]
 
     return _getindex(G, uc, to_indices(uc, (cartind,))...)
+end
+function _getindex(
+    G::Type{SquareSymmetric}, uc::AbstractUnitCell, i1::Union{UnitRange,Base.Slice}, i2::Int
+)
+    return _getindex(G::Type{SquareSymmetric}, uc::AbstractUnitCell, i2, i1)
 end
 function _getindex(G::Type{SquareSymmetric}, uc::AbstractUnitCell, i1, i2)
     if isempty(i1)
