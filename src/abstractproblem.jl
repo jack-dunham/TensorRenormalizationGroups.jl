@@ -5,10 +5,7 @@ abstract type AbstractRuntime end
 $(TYPEDEF)
 
 Concrete struct representing the state of a contraction algorithm of type `Alg` used to 
-contract a network of type `Net` with runtime tensors of type `Run`. If a callback is 
-provided, any returned data is stored in an instance of type `Out`. Note, avoid 
-constructing this object directly, instead use the function `newproblem` to construct a 
-a new instance of `InfiniteContraction`.
+contract a network of type `Net` with runtime tensors of type `Run`. 
 
 ## Fields
 
@@ -16,17 +13,22 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-    RenormalizationProblem(network::AbstractMatrix, [initial]; alg)
+    RenormalizationProblem(network::AbstractMatrix, alg::AbstractAlgorithm, [initial::AbstractRuntime])
 
 A new instance of `RenormalizationProblem` is constructed by passing `network` and 
-(optionally) an initial runtime object, as well as the chosen `alg` as a keyword
-argument. If `initial` is specified, `convertproblem` will be called to attempt to make
+(optionally) an initial runtime object, as well as the chosen `alg`. 
+If `initial` is specified, `convertproblem` will be called to attempt to make
 `initial` compatible with `alg`.
 
 Note, `RenormalizationProblem` will *always* be constructed using a `copy` of `network`, but
 *not* a `deepcopy`. That is, one can mutate the `network` struct using `setindex!` with
 out mutating the constructed `RenormalizationProblem`, but mutating the tensor elements 
 themselves *will* propagate through to this struct.
+
+    RenormalizationProblem(network::AbstractMatrix, problem::RenormalizationProblem)
+
+Constuct a new instance of `RenormalizationProblem` using the algorithm and runtime from
+existing `problem`.
 """
 struct RenormalizationProblem{
     Alg<:AbstractAlgorithm,Net<:AbstractUnitCell,Run<:AbstractRuntime
@@ -42,62 +44,31 @@ struct RenormalizationProblem{
     "A `deepcopy` of `runtime` called at construction."
     initial::Run
     function RenormalizationProblem(
-        network::Net, initial=nothing; alg::Alg
-    ) where {Alg,Net<:AbstractUnitCell}
+        network::Net, alg::Alg, initial
+    ) where {Alg<:AbstractAlgorithm,Net<:AbstractUnitCell}
         info = ConvergenceInfo()
-        runtime =
-            isnothing(initial) ? initialize(network, alg) : convertproblem(Alg, initial)
+        if isnothing(initial)
+            @info "he"
+            runtime = initialize(network, alg)
+        else
+            runtime = convertproblem(Alg, initial)
+        end
+        @info typeof(runtime)
         return new{Alg,Net,typeof(runtime)}(
-            alg, copy(network), runtime, info, deepcopy(initial)
+            alg, copy(network), runtime, info, deepcopy(runtime)
         )
     end
 end
-
-function RenormalizationProblem(network::AbstractMatrix, initial=nothing; kwargs...)
-    uc = UnitCell(network)
-    return RenormalizationProblem(uc, initial; kwargs...)
+function RenormalizationProblem(
+    network::AbstractMatrix, alg::AbstractAlgorithm, initial=nothing
+)
+    return RenormalizationProblem(UnitCell(network), alg, initial)
+end
+function RenormalizationProblem(network::AbstractMatrix, problem::RenormalizationProblem)
+    return RenormalizationProblem(network, problem.alg, problem.runtime)
 end
 
 convertproblem(::Type, runtime) = runtime
-
-"""
-    newcontraction(algorithm, network, [initial_tensors]; kwargs...)
-
-Initialize an instance of a `InfiniteContraction` to contract network of tensors 
-`network` using algorithm `algorithm`. 
-
-# Arguments
-- `network::AbstractNetwork`: the unit cell of tensors to be contracted
-- `alg::AbstractAlgorithm`: the algorithm to contract `network` with
-- `initial_tensors::AbstractRuntime`: initial runtime tensors to use (optional)
-
-# Keywords
-- `store_initial::Bool = true`: if true, store a deep copy of the initial tensors
-- `callback::Callback{Out} = Callback(identity, nothing)`: represents a function to be 
-    executed at the end of each step
-
-# Returns
-- `ProblemState{Alg,...}`: problem state instancecorresponding to the supplied tensors 
-    and parameters
-"""
-function newrenormalization(network; alg, kwargs...)
-    initial_runtime = initialize(network, alg)
-    return newrenormalization(network, initial_runtime; alg=alg, kwargs...)
-end
-
-function newrenormalization(network, initial_runtime; alg, store_initial=true, verbose=true)
-    info = ConvergenceInfo()
-
-    if store_initial
-        initial_copy = deepcopy(initial_runtime)
-    else
-        initial_copy = nothing
-    end
-
-    prob = RenormalizationProblem(network, initial_runtime; alg=alg)
-
-    return prob
-end
 
 function _run!(callback, problem::RenormalizationProblem)
     info = problem.info
@@ -144,8 +115,9 @@ Perform the renormalization defined in `problem` executing `callback(problem)` a
 each step and mutating `problem` in place. If `verbose = false`, top-level information
 about algorithm progress will be surpressed.
 """
-renormalize!(problem::RenormalizationProblem; kwargs...) =
-    renormalize!(identity, problem; kwargs...)
+function renormalize!(problem::RenormalizationProblem; kwargs...)
+    return renormalize!(identity, problem; kwargs...)
+end
 function renormalize!(callback, problem::RenormalizationProblem; kwargs...)
     if problem.info.finished == true
         println(
@@ -177,6 +149,8 @@ function reset!(problem::RenormalizationProblem)
     problem.info.converged = false
     problem.info.error = Inf
     problem.info.iterations = 0
+    # Some runtime objects store fields derived from `problem.network`. Need to update
+    # these.
     reset!(problem.runtime, problem.network)
     return problem
 end
@@ -184,17 +158,11 @@ end
 """
     recycle!(problem::ProblemState)
 
-Reset the convergence info of `problem`.
+Call `reset!` on `problem`, and set the elements `problem.network` to that of `copy(network)`
 """
 function recycle!(problem::RenormalizationProblem, network)
-    continue!(problem)
-    problem.info.converged = false
-    problem.info.error = Inf
-    problem.info.iterations = 0
-
     problem.network .= copy(network)
-
-    reset!(problem.runtime, network)
+    reset!(problem)
     return problem
 end
 
@@ -204,24 +172,7 @@ end
 Restart the algorithm entirely, returning the tensors to their initial state.
 """
 function restart!(problem::RenormalizationProblem)
-    if true #isdefined(problem, :initial_tensors)
-        reset!(problem)
-        deepcopy!(problem.runtime, problem.initial)
-    else
-        println(
-            "Cannot restart algorithm as initial tensors are undefined. Doing nothing..."
-        )
-    end
-    return problem
-end
-
-"""
-    forcerun!(problem::ProblemState)
-
-Force the algorithm to continue. Equivalent to calling `continue!` followed by `run!`.
-"""
-function forcerun!(problem::RenormalizationProblem)
-    continue!(problem)
-    renormalize!(problem)
+    reset!(problem)
+    deepcopy!(problem.runtime, problem.initial)
     return problem
 end
