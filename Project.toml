@@ -17,6 +17,8 @@ TensorKit = "0.14.4"
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
+ReTestItems = "817f1d60-ba6b-4fd5-9520-3cf149f6a823"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
 [targets]
-test = ["Test", "TestExtras"]
+test = ["Test", "TestExtras", "ReTestItems", "Reexport"]

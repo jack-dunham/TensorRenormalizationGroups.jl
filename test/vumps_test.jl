@@ -1,4 +1,9 @@
-@testset "VUMPS" verbose = true begin
+@testsetup module SetupVUMPS
+using Reexport
+@reexport using TensorKit, InfiniteTensorContractions, TestExtras, CircularArrays
+end
+
+@testitem "VUMPS" setup = [SetupVUMPS] begin
     TF = Float64
     TC = ComplexF64
 

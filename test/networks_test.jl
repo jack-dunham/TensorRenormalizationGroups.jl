@@ -1,4 +1,9 @@
-@testset verbose = true begin
+@testsetup module SetupNetworks
+using Reexport
+@reexport using TensorKit, InfiniteTensorContractions, TestExtras, CircularArrays
+end
+
+@testitem "Networks" setup = [SetupNetworks] begin
     e = ℂ^2
     s = ℂ^3
     w = ℂ^4
@@ -78,7 +83,14 @@
             @test ucsym[i, i] isa Int
         end
 
+        @test ucsym[1:1, 1] isa CircularVector
+        @test ucsym[1, 1:1] isa CircularVector
+
+        @test ucsym[:, 1] isa CircularVector
+        @test ucsym[1, :] isa CircularVector
+
         @test ucsym[1:2, 1] isa CircularVector
+        @test ucsym[1, 1:2] isa CircularVector
         @test ucsym[1:3, 1:2] isa CircularMatrix
 
         @test ucsym[1:3, 1:3] isa CircularMatrix

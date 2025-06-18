@@ -1,4 +1,9 @@
-@testset "UnitCell" verbose = true begin
+@testsetup module SetupUnitCell
+using Reexport
+@reexport using TensorKit, InfiniteTensorContractions, TestExtras, CircularArrays
+end
+
+@testitem "UnitCell" setup = [SetupUnitCell] begin
     TF = UnitCell{Square,Float64,Matrix{Float64}}
     TC = UnitCell{Square,ComplexF64,Matrix{ComplexF64}}
 
