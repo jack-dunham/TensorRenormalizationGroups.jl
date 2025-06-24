@@ -249,7 +249,8 @@ end
         e_MSp...,
     )
 
-    @info e_einsum
+    @debug e_einsum
+
     quote
         @tensoropt rv = $e_einsum
     end
@@ -381,7 +382,7 @@ end
     e_einsum = Expr(
         :call, :*, e_FL, e_FR, e_ACU, e_ACD, e_MS..., e_MSp..., e_ARU..., e_ARD...
     )
-    @info e_einsum
+    @debug e_einsum
 
     quote
         @tensoropt rv = $e_einsum

@@ -54,7 +54,6 @@ struct Renormalization{
         else
             runtime = convertproblem(Alg, initial)
         end
-        @info typeof(runtime)
         return new{Alg,Net,typeof(runtime)}(
             alg, copy(network), runtime, info, deepcopy(runtime)
         )
@@ -97,7 +96,6 @@ function _run!(callback, problem::Renormalization)
 
     info.finished = true
 
-    @info "Convergence: $(info.error)"
     if info.converged
         @info "$TAlg convergenced to within tolerance $(alg.tol) after $(info.iterations) iterations"
     else
