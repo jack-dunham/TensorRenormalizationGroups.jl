@@ -5,6 +5,7 @@ using CircularArrays
 using KrylovKit
 using LinearAlgebra
 using TensorKit
+using Printf
 using DocStringExtensions
 
 export TRGroups

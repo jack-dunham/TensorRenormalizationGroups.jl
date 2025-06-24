@@ -79,16 +79,16 @@ function _run!(callback, problem::Renormalization)
     alg = problem.alg
     TAlg = typeof(alg)
 
-    @info "Running algorithm:" algorithm = alg
+    if alg.verbose
+        convprint("Algorithm", "Iteration", "Convergence")
+        convprint("While...", "≤$(alg.maxiter)", ">$(alg.tol)")
+    end
 
-    while info.iterations < alg.maxiter && info.error ≥ alg.tol
+    while info.iterations < alg.maxiter && info.error > alg.tol
         info.error = step!(problem)
 
         info.iterations += 1
-
-        if alg.verbose
-            @info "$TAlg convergence ≈ $(info.error) after $(info.iterations) iterations."
-        end
+        alg.verbose && convprint(TAlg, info.iterations, info.error)
 
         callback(problem)
     end
@@ -96,13 +96,17 @@ function _run!(callback, problem::Renormalization)
 
     info.finished = true
 
-    if info.converged
-        @info "$TAlg convergenced to within tolerance $(alg.tol) after $(info.iterations) iterations"
-    else
+    if !info.converged
         @warn "$TAlg did not convergence to within $(alg.tol) after $(info.iterations) iterations"
     end
 
     return info.finished
+end
+
+function convprint(alg, itr, conv)
+    str = @sprintf("%-20s %25s %10s \n", alg, conv, itr)
+    @info(str)
+    return nothing
 end
 
 """
