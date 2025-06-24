@@ -38,12 +38,13 @@ $(TYPEDFIELDS)
 end
 
 struct VUMPSRuntime{
-    AType<:AbstractUnitCell,
-    CType<:AbstractUnitCell,
+    G,
+    AType,
+    CType,
     FType<:AbstractUnitCell,
     SType<:AbstractUnitCell,
 } <: AbstractBoundaryRuntime
-    mps::MPS{AType,CType}
+    mps::MPS{G, AType,CType}
     fixedpoints::FixedPoints{FType}
     svals::SType
 end
@@ -98,7 +99,7 @@ function KrylovKit.initialize(network, alg::VUMPS)
     return VUMPSRuntime(boundary_mps, fixed_points, svals)
 end
 
-function step!(problem::RenormalizationProblem{<:VUMPS})
+function step!(problem::Renormalization{<:VUMPS})
     return step!(problem.runtime, problem.network, problem.alg)
 end
 
@@ -241,8 +242,8 @@ function updateleft!(al::AbstractTensorMap, ac::AbstractTensorMap, c::AbstractTe
     return errL
 end
 
-function updateleft!(A::MPS)
-    AL, C, _, AC = unpack(A)
+function updateleft!(mps::MPS)
+    AL, C, _, AC = mps
     errL = updateleft!.(AL, AC, C)
     return errL
 end
@@ -260,8 +261,8 @@ function updateright!(ar::AbstractTensorMap, ac::AbstractTensorMap, c::AbstractT
     return errR
 end
 
-function updateright!(A::MPS)
-    _, C, AR, AC = unpack(A)
+function updateright!(mps::MPS)
+    _, C, AR, AC = mps
     errR = updateright!.(AR, AC, circshift(C, (1, 0)))
     return errR
 end
@@ -272,18 +273,27 @@ function updateboth!(A::MPS)
     return A, errL, errR
 end
 
-function contract(vumps::VUMPSRuntime, network, i1::UnitRange, i2::UnitRange)
-    if length(i2) > 1
-        throw(
-            ArgumentError(
-                "Cannot contract a VUMPS boundary around more than one vertical tensor."
-            ),
-        )
-    else
-        i2 = i2[begin]
-    end
+function _contract(network_top, network_bot, vumps::VUMPSRuntime, i1, i2)
+    FL, FR, ACU, ARU, ACD, ARD = vumpsboundary(vumps, i1, i2)
+    return _contractall(FL, FR, ACU, ARU, ACD, ARD, network_top, network_bot)
+end
+function _contract(network, vumps::VUMPSRuntime, i1, i2)
+    FL, FR, ACU, ARU, ACD, ARD = vumpsboundary(vumps, i1, i2)
+    return _contractall(FL, FR, ACU, ARU, ACD, ARD, network)
+end
 
-    _, _, AR, AC = unpack(vumps.mps)
+function vumpsboundary(vumps::VUMPSRuntime, i1, i2)
+    if length(i2) > 1
+        throw(ArgumentError(
+            "
+            can only contract `network` across a single row using VUMPS environment. To contract 
+            across a column, compute a new environment on `permutedims(network)`.
+            "
+        ))
+    else
+         i2 = i2[begin]
+    end
+    _, _, AR, AC = vumps.mps
 
     fixed_points = vumps.fixedpoints
 
@@ -299,7 +309,7 @@ function contract(vumps::VUMPSRuntime, network, i1::UnitRange, i2::UnitRange)
     ARU = tuple((AR[i, i2] for i in (l + 1):r)...)
     ARD = tuple((AR[i, i2 + 1]' for i in (l + 1):r)...)
 
-    return _contractall(FL, FR, ACU, ARU, ACD, ARD, network[i1, i2])
+    return FL, FR, ACU, ARU, ACD, ARD
 end
 
 ### TESTING TODO: DELETE

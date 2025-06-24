@@ -1,5 +1,5 @@
-module InfiniteTensorContractions
-const ITC = InfiniteTensorContractions
+module TensorRenormalizationGroups
+const TRGroups = TensorRenormalizationGroups
 
 using CircularArrays
 using KrylovKit
@@ -7,20 +7,20 @@ using LinearAlgebra
 using TensorKit
 using DocStringExtensions
 
-export ITC
+export TRGroups
 
 export AbstractUnitCellGeometry
 export AbstractUnitCell
 
-# RenormalizationProblem
-export RenormalizationProblem
+# Renormalization
+export Renormalization
 
 # ABSTRACT RUNTIMES
-export AbstractRuntime
+export AbstractRenormalizationRuntime
 export AbstractBoundaryRuntime, AbstractGrainingRuntime
 
 # ABSTRACT ALGORITHMS
-export AbstractAlgorithm
+export AbstractRenormalizationAlgorithm
 export AbstractBoundaryAlgorithm, AbstractGrainingAlgorithm
 
 export Square, SquareSymmetric
@@ -35,13 +35,14 @@ export VUMPS, CTMRG, TRG
 export VUMPSRuntime, MPS, FixedPoints, TransferMatrix
 
 # CORNERS
+export AbstractCornerMethod
 export CornerMethodTensors, CornerMethodRuntime, Corners, Edges
 export corners, edges
 
 export getboundary
 
 # INTERFACE
-export newrenormalization, initialize, renormalize!, renormalize, contract
+export initialize, renormalize!, contract
 
 # No deps
 include("convergenceinfo.jl")
@@ -87,4 +88,126 @@ function __init__()
     return nothing
 end
 
+function testpeps(x)
+    β = x * log(1 + sqrt(2)) / 2
+
+    Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
+    X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2)
+
+    op = exp(β / 2 * Z ⊗ Z)
+
+    U, s, V = tsvd(op, (1, 3), (2, 4); trunc=truncbelow(eps()))
+
+    E = S = U * sqrt(s)
+    W = N = sqrt(s) * V
+
+    plus = Tensor(1 / sqrt(2) * [1, -1], ℂ^2)
+
+    @tensoropt state[out; e s w n] :=
+        E[out x4; e] * S[x4 x3; s] * W[w; x3 x2] * N[n; x2 x1] * plus[x1]
+
+    hs = TensorMap{Float64}(
+        undef, one(ComplexSpace), ℂ^2 * (ℂ^2)' * ℂ^2 * (ℂ^2)' * (ℂ^2)' * ℂ^2 * (ℂ^2)' * ℂ^2
+    )
+    hs = @tensor hs[e1 e2 s1 s2 w1 w2 n1 n2] =
+        one(Z)[x2; x1] * state[x1; e1 s1 w1 n1] * (state')[e2 s2 w2 n2; x2]
+    hsm = TensorMap(ComplexF64.(hs.data), one(ComplexSpace), ℂ^4 * ℂ^4 * (ℂ^4)' * (ℂ^4)')
+    net = UnitCell(fill(hsm, 1, 1))
+
+    hsZ = TensorMap{Float64}(
+        undef, one(ComplexSpace), ℂ^2 * (ℂ^2)' * ℂ^2 * (ℂ^2)' * (ℂ^2)' * ℂ^2 * (ℂ^2)' * ℂ^2
+    )
+    hsZ = @tensor hsZ[e1 e2 s1 s2 w1 w2 n1 n2] =
+        Z[x2; x1] * state[x1; e1 s1 w1 n1] * (state')[e2 s2 w2 n2; x2]
+    hsmZ = TensorMap(hsZ.data, one(ComplexSpace), ℂ^4 * ℂ^4 * (ℂ^4)' * (ℂ^4)')
+    netZ = UnitCell(fill(hsmZ, 1, 1))
+
+    @info scalartype.(net)
+    rt = Renormalization(net, VUMPS(; maxiter=100, bonddim=20))
+
+    renormalize!(rt)
+    norm = contract(net, rt.runtime)[1, 1]
+
+    magn_ss = contract(netZ, rt.runtime)[1, 1] / norm
+
+    @info "" norm magn_ss
+
+    rv = []
+
+    for l in 2:20
+        bulk = fill(hsm, l - 2)
+
+        magn = contract([hsmZ, bulk..., hsmZ], rt.runtime, 1:l, 1:1)
+        magn_norm = contract([hsm, bulk..., hsm], rt.runtime, 1:l, 1:1)
+
+        push!(rv, magn / magn_norm - magn_ss^2)
+    end
+
+    return rv
+end
+
+function testpeps2(x)
+    β = x * log(1 + sqrt(2)) / 2
+
+    Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
+    X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2)
+
+    op = exp(β / 2 * Z ⊗ Z)
+
+    U, s, V = tsvd(op, (1, 3), (2, 4); trunc=truncbelow(eps()))
+
+    E = S = U * sqrt(s)
+    W = N = sqrt(s) * V
+
+    plus = Tensor(1 / sqrt(2) * [1, -1], ℂ^2)
+
+    @tensoropt state[out; e s w n] :=
+        E[out x4; e] * S[x4 x3; s] * W[w; x3 x2] * N[n; x2 x1] * plus[x1]
+
+    size = 2
+
+    net = UnitCell(fill(CompositeTensor(state, state'), size, size))
+    netZ = UnitCell(fill(CompositeTensor(state, (Z * state)'), size, size))
+
+    # hsZ = TensorMap{Float64}(
+    #     undef, one(ComplexSpace), ℂ^2 * (ℂ^2)' * ℂ^2 * (ℂ^2)' * (ℂ^2)' * ℂ^2 * (ℂ^2)' * ℂ^2
+    # )
+    # hsZ = @tensor hsZ[e1 e2 s1 s2 w1 w2 n1 n2] =
+    #     Z[x2; x1] * state[x1; e1 s1 w1 n1] * (state')[e2 s2 w2 n2; x2]
+    # hsmZ = TensorMap(hsZ.data, one(ComplexSpace), ℂ^4 * ℂ^4 * (ℂ^4)' * (ℂ^4)')
+    # netZ = UnitCell(fill(hsmZ, 1, 1))
+
+    @info scalartype.(net)
+    rt = Renormalization(net, CTMRG(; maxiter=100, bonddim=40))
+
+    renormalize!(rt)
+    norm = contract(net, rt.runtime)[1, 1]
+
+    @info norm
+
+    magn_ss = contract(netZ, rt.runtime) ./ norm
+
+    @info "" norm magn_ss
+
+    magn_ss = magn_ss[1, 1]
+
+    rv = []
+
+    for l in 2:20
+        bulk = fill(state, l - 2)
+
+        ops = [Z * state, bulk..., Z * state]
+        bare_ops = [state, bulk..., state]
+
+        magn_in = map(CompositeTensor, ops, adjoint.(bare_ops))
+        magn_norm_in = map(CompositeTensor, bare_ops, adjoint.(bare_ops))
+
+        magn = contract(magn_in, rt.runtime, 1:l, 1)
+        magn_norm = contract(magn_norm_in, rt.runtime, 1:l, 1)
+
+        push!(rv, magn / magn_norm - magn_ss^2)
+    end
+
+    return rv
+end
 end # module

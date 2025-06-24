@@ -1,7 +1,7 @@
 @testsetup module SetupIsing
 using Reexport
 using Random
-@reexport using TensorKit, InfiniteTensorContractions, TestExtras
+@reexport using TensorKit, TensorRenormalizationGroups, TestExtras
 
 Random.seed!(1234)
 
@@ -90,7 +90,75 @@ function randgauge!(net, x, y, X)
     return nothing
 end
 
-end # Setup
+end # SetupIsing
+
+@testsetup module SetupIsingPEPS
+using Reexport
+using Random
+@reexport using TensorKit, TensorRenormalizationGroups, TestExtras
+
+export CZ1L
+
+function testpeps(x)
+    β = x * log(1 + sqrt(2)) / 2
+
+    Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
+    X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2)
+
+    op = exp(β / 2 * Z ⊗ Z)
+
+    U, s, V = tsvd(op, (1, 3), (2, 4); trunc=truncbelow(eps()))
+
+    E = S = U * sqrt(s)
+    W = N = sqrt(s) * V
+
+    plus = Tensor(1 / sqrt(2) * [1, -1], ℂ^2)
+
+    @tensoropt state[out; e s w n] :=
+        E[out x4; e] * S[x4 x3; s] * W[w; x3 x2] * N[n; x2 x1] * plus[x1]
+
+    hs = TensorMap{Float64}(
+        undef, one(ComplexSpace), ℂ^2 * (ℂ^2)' * ℂ^2 * (ℂ^2)' * (ℂ^2)' * ℂ^2 * (ℂ^2)' * ℂ^2
+    )
+    hs = @tensor hs[e1 e2 s1 s2 w1 w2 n1 n2] =
+        one(Z)[x2; x1] * state[x1; e1 s1 w1 n1] * (state')[e2 s2 w2 n2; x2]
+    hsm = TensorMap(ComplexF64.(hs.data), one(ComplexSpace), ℂ^4 * ℂ^4 * (ℂ^4)' * (ℂ^4)')
+    net = UnitCell(fill(hsm, 1, 1))
+
+    hsZ = TensorMap{Float64}(
+        undef, one(ComplexSpace), ℂ^2 * (ℂ^2)' * ℂ^2 * (ℂ^2)' * (ℂ^2)' * ℂ^2 * (ℂ^2)' * ℂ^2
+    )
+    hsZ = @tensor hsZ[e1 e2 s1 s2 w1 w2 n1 n2] =
+        Z[x2; x1] * state[x1; e1 s1 w1 n1] * (state')[e2 s2 w2 n2; x2]
+    hsmZ = TensorMap(hsZ.data, one(ComplexSpace), ℂ^4 * ℂ^4 * (ℂ^4)' * (ℂ^4)')
+    netZ = UnitCell(fill(hsmZ, 1, 1))
+
+    alg = VUMPS(; maxiter=100, bonddim=50)
+    # alg = CTMRG(; maxiter=1000, tol=1e-10, svdalg=TensorKit.SVD(), bonddim=50)
+    rt = Renormalization(net, alg)
+
+    renormalize!(rt)
+    norm = contract(net, rt.runtime)[1, 1]
+
+    magn_ss = contract(netZ, rt.runtime)[1, 1] / norm
+
+    rv = []
+
+    for l in 2:10
+        bulk = fill(hsm, l - 2)
+
+        magn = contract([hsmZ, bulk..., hsmZ], rt.runtime, 1:l, 1:1)
+        magn_norm = contract([hsm, bulk..., hsm], rt.runtime, 1:l, 1:1)
+
+        push!(rv, magn / magn_norm - magn_ss^2)
+    end
+
+    return rv
+end
+
+const CZ1L = testpeps(1.1)
+
+end # SetupIsingPEPS
 
 @testitem "Classical Ising model" setup = [SetupIsing] begin
     βc = log(1 + sqrt(2)) / 2
@@ -108,12 +176,12 @@ end # Setup
 
             @testset "Using $(typeof(alg))" for alg in algs
                 runtime = @constinferred(initialize(Znet, alg))
-                state = @constinferred(RenormalizationProblem(Znet, alg, runtime))
+                state = @constinferred(Renormalization(Znet, alg, runtime))
 
                 renormalize!(state)
 
-                z_val = @constinferred(contract(state.runtime, Znet))
-                m_val = contract(state.runtime, Mnet) ./ z_val
+                z_val = @constinferred(contract(Znet, state))
+                m_val = contract(Mnet, state) ./ z_val
 
                 for y in 1:N
                     for x in 1:N
@@ -121,24 +189,92 @@ end # Setup
                     end
                 end
             end
+
+            trgalg = TRG(; verbose=false, maxiter=100, trunc=TensorKit.truncdim(10))
+
+            z_exact = exactZ(βc * x)
+
+            @testset "Using $(typeof(trgalg))" begin
+                Znet, Mnet = isingnetwork(G, Float64, x * βc, N)
+
+                rt = @constinferred(initialize(Znet, trgalg))
+                st = @constinferred(Renormalization(Mnet, trgalg, rt))
+
+                renormalize!(st)
+
+                z_val = st.runtime.cumsum
+
+                for y in 1:N
+                    for x in 1:N
+                        @test abs(z_val[x, y]) ≈ z_exact atol = 1e-4
+                    end
+                end
+            end
         end
     end
+end
 
-    trgalg = TRG(; verbose=false, maxiter=100, trunc=TensorKit.truncdim(10))
+@testitem "Classical Ising Model (PEPS)" setup = [SetupIsingPEPS] begin
+    x = 1.1
+    βc = log(1 + sqrt(2)) / 2
+    β = x * βc
+    exact_M = abs((1 - sinh(2 * x * βc)^(-4)))^(1 / 8)
 
-    z_exact = exactZ(βc * x)
+    Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
 
-    @testset "Using $(typeof(trgalg))" begin
-        Znet, Mnet = isingnetwork(Square, Float64, x * βc, 1)
+    op = exp(β / 2 * Z ⊗ Z)
 
-        rt = @constinferred(initialize(Znet, trgalg))
-        st = @constinferred(RenormalizationProblem(Mnet, trgalg, rt))
+    U, s, V = tsvd(op, (1, 3), (2, 4); trunc=truncbelow(eps()))
 
-        renormalize!(st)
+    E = S = U * sqrt(s)
+    W = N = sqrt(s) * V
 
-        z_val = st.runtime.cumsum
+    plus = Tensor(1 / sqrt(2) * [1, -1], ℂ^2)
 
-        @test abs(z_val[1, 1]) ≈ z_exact atol = 1e-4
+    @tensoropt state[out; e s w n] :=
+        E[out x4; e] * S[x4 x3; s] * W[w; x3 x2] * N[n; x2 x1] * plus[x1]
+
+    size = 1
+
+    net = UnitCell(fill(CompositeTensor(state, state'), size, size))
+    netZ = UnitCell(fill(CompositeTensor(state, (Z * state)'), size, size))
+
+    algs = (
+        VUMPS(; maxiter=1000, tol=1e-10, bonddim=50),
+        CTMRG(; maxiter=1000, tol=1e-10, svdalg=TensorKit.SVD(), bonddim=50),
+    )
+
+    @testset "Using $(typeof(alg))" for alg in algs
+        rt = Renormalization(net, alg)
+
+        renormalize!(rt)
+
+        norm = contract(net, rt)[1, 1]
+        magn_ss = contract(netZ, rt)[1, 1] / norm
+
+        @info alg norm
+        @test abs(magn_ss) ≈ exact_M atol = 1e-10
+
+        # magn_ss = 1
+
+        rv = []
+
+        for l in 2:10
+            bulk = fill(state, l - 2)
+
+            ops = [Z * state, bulk..., Z * state]
+            bare_ops = [state, bulk..., state]
+
+            magn_in = map(CompositeTensor, bare_ops, adjoint.(ops))
+            magn_norm_in = map(CompositeTensor, bare_ops, adjoint.(bare_ops))
+
+            magn = contract(magn_in, rt.runtime, 1:l, 1)
+            magn_norm = contract(magn_norm_in, rt.runtime, 1:l, 1)
+
+            push!(rv, magn / magn_norm - magn_ss^2)
+        end
+
+        @test rv ≈ CZ1L
     end
 end
 #=

@@ -1,9 +1,9 @@
 using Test
 using TestExtras
 using ReTestItems
-using InfiniteTensorContractions
+using TensorRenormalizationGroups
 using CircularArrays
 using TensorKit
 using LinearAlgebra
 
-runtests(InfiniteTensorContractions)
+runtests(TensorRenormalizationGroups)

@@ -83,7 +83,7 @@ function fixedpoints!(
     network;
     ishermitian=forcehermitian(fpoints, mps, network),
 )
-    AL, C, AR, _ = unpack(mps)
+    AL, C, AR, _ = mps
 
     # TransferMatrix(AL[1, 1], network[1, 1], AL[1, 1])
 

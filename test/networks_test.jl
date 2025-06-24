@@ -1,6 +1,6 @@
 @testsetup module SetupNetworks
 using Reexport
-@reexport using TensorKit, InfiniteTensorContractions, TestExtras, CircularArrays
+@reexport using TensorKit, TensorRenormalizationGroups, TestExtras, CircularArrays
 end
 
 @testitem "Networks" setup = [SetupNetworks] begin
@@ -61,6 +61,7 @@ end
         ucsym = UnitCell{SquareSymmetric}([1, 2, 3])
 
         @test UnitCell{Square}(data) == ucsym
+        @test UnitCell{SquareSymmetric}(data) == ucsym
 
         @test ucsym == UnitCell{SquareSymmetric}([1 2 3])
         @test ucsym == UnitCell{SquareSymmetric}([1; 2; 3;;])

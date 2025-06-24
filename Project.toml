@@ -1,7 +1,7 @@
-name = "InfiniteTensorContractions"
+name = "TensorRenormalizationGroups"
 uuid = "742c4823-a45f-4b1c-bad3-1a5bdcda2a0b"
 authors = ["jack-dunham <ucapunh@ucl.ac.uk>"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 CircularArrays = "7a955b69-7140-5f4e-a0ed-f168c5e2e749"

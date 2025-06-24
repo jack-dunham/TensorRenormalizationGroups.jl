@@ -1,5 +1,5 @@
-abstract type AbstractBoundaryAlgorithm <: AbstractAlgorithm end
-abstract type AbstractBoundaryRuntime <: AbstractRuntime end
+abstract type AbstractBoundaryAlgorithm <: AbstractRenormalizationAlgorithm end
+abstract type AbstractBoundaryRuntime <: AbstractRenormalizationRuntime end
 
 function boundaryerror!(S_old::AbstractMatrix, C_new::AbstractMatrix)
     S_new = boundaryerror.(C_new)

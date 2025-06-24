@@ -1,6 +1,6 @@
 @testsetup module SetupCTMRG
 using Reexport
-@reexport using TensorKit, InfiniteTensorContractions, TestExtras, CircularArrays
+@reexport using TensorKit, TensorRenormalizationGroups, TestExtras, CircularArrays
 end
 
 @testitem "Corner Methods" setup = [SetupCTMRG] begin
@@ -59,7 +59,7 @@ end
 
         st = @constinferred(initialize(uc, alg))
 
-        prob = @constinferred(RenormalizationProblem(uc, alg, st))
+        prob = @constinferred(Renormalization(uc, alg, st))
 
         @test eltype(prob.network) <: CompositeTensor
 

@@ -1,10 +1,10 @@
 push!(LOAD_PATH, "../src/")
 
 using Documenter
-using InfiniteTensorContractions
+using TensorRenormalizationGroups
 
 makedocs(
-    sitename = "InfiniteTensorContractions.jl",
+    sitename = "TensorRenormalizationGroups.jl",
     authors = "Jack Dunham",
     pages = [
         "Home" => "index.md",
@@ -14,5 +14,5 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/jack-dunham/InfiniteTensorContractions.jl.git",
+    repo = "github.com/jack-dunham/TensorRenormalizationGroups.jl.git",
 )

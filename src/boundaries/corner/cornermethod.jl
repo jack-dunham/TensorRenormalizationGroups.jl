@@ -66,7 +66,7 @@ function TensorKit.scalartype(::Type{<:CornerMethodTensors{C,E}}) where {C,E}
 end
 
 struct CornerMethodRuntime{T<:CornerMethodTensors,S<:CornerSingularValues} <:
-       AbstractRuntime
+       AbstractRenormalizationRuntime
     primary::T
     permuted::T
     svals::S
@@ -81,7 +81,7 @@ TensorKit.scalartype(::Type{<:CornerMethodRuntime{T}}) where {T} = scalartype(T)
 chispace(c::Corners) = domain(c[1][1, 1])[1]
 chispace(c::CornerMethodTensors) = chispace(c.corners)
 
-function step!(problem::RenormalizationProblem{<:AbstractCornerMethod})
+function step!(problem::Renormalization{<:AbstractCornerMethod})
     fpcm = dofpcm(problem.alg)
     error = step!(fpcm, problem)
     return error

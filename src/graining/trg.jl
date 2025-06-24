@@ -17,7 +17,7 @@ $(TYPEDFIELDS)
 
     $(FUNCTIONNAME)(; trunc, maxiter=20, tol=1e-12, verbose=true)
 """
-@kwdef struct TRG{T<:TruncationScheme} <: AbstractAlgorithm
+@kwdef struct TRG{T<:TruncationScheme} <: AbstractRenormalizationAlgorithm
     "The `TruncationScheme` used during the SVD step. See `TensorKit.TruncationScheme` and `TensorKit.tsvd` for more details."
     trunc::T
     "Maximum number of iterations."
@@ -218,7 +218,7 @@ function trgstep!(runtime::TRGRuntime, trunc; ramping=true)
     return traces, allconv
 end
 
-function step!(problem::RenormalizationProblem{<:TRG})
+function step!(problem::Renormalization{<:TRG})
     runtime = problem.runtime
     alg = problem.alg
 

@@ -1,13 +1,13 @@
 @testsetup module SetupVUMPS
 using Reexport
-@reexport using TensorKit, InfiniteTensorContractions, TestExtras, CircularArrays
+@reexport using TensorKit, TensorRenormalizationGroups, TestExtras, CircularArrays
 end
 
 @testitem "VUMPS" setup = [SetupVUMPS] begin
     TF = Float64
     TC = ComplexF64
 
-    inds = CartesianIndices((1:4, 1:2)) # three matrix product states of length 4
+    inds = CartesianIndices((1:4, 1:3)) # three matrix product states of length 4
 
     @testset "MPS for eltype = $T" verbose = true for T in (TF, TC)
         d = ℂ^2
@@ -15,6 +15,7 @@ end
 
         ds = UnitCell(map(_ -> d, inds))
         χs = UnitCell(map(_ -> χ, inds))
+        χs1 = UnitCell(map(_ -> ℂ^1, inds))
 
         A = UnitCell(map(_ -> TensorMap(randn, T, d, χ * χ'), inds))
         C = UnitCell(map(_ -> TensorMap(randn, T, one(d), χ * χ'), inds))
@@ -28,9 +29,18 @@ end
 
         @test ITC.centraltensor(C, A)[1, 1] == ITC.mulbond(cr, a)
         @test ITC.centraltensor(A, C)[1, 1] == ITC.mulbond(a, cl)
-        @constinferred MPS(A)
 
+        mps = @constinferred(MPS(A))
+        @test @constinferred(scalartype(mps)) == T
+
+        AL, C, AR, AC = mps
+        @test all((AL, C, AR, AC) == ITC.unpack(mps))
         @testset "Mixed canonical form" begin
+            let mps = MPS(rand, T, ds, χs1), C = mps.C
+                AL, C, AR, AC = mps
+                @test all(@. domain(C) == χs1 * adjoint(χs1))
+            end
+
             mps = @constinferred(MPS(rand, T, ds, χs))
 
             for uc in ITC.unpack(mps)

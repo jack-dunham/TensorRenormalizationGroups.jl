@@ -202,3 +202,10 @@ get_removal_isometry(bond) = get_embedding_isometry(bond, one(bond))
         $(assignments...)
     end
 end
+
+function swapvirtual(t::AbstractTensorMap)
+    if dim(domain(t)) == 1
+        t = copy(t)
+    end
+    return permutedom(t, (2, 1))
+end

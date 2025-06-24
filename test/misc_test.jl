@@ -1,6 +1,6 @@
 @testsetup module SetupMisc
 using Reexport
-@reexport using TensorKit, InfiniteTensorContractions, TestExtras, CircularArrays
+@reexport using TensorKit, TensorRenormalizationGroups, TestExtras, CircularArrays
 end
 
 @testitem "Other tests" setup = [SetupMisc] begin

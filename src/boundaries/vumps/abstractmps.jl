@@ -1,28 +1,46 @@
 # DONE
 abstract type AbstractMPS end
 
-@doc raw"""
-    struct MPS
 """
-struct MPS{AType<:AbUnCe{<:TenAbs{2}},CType<:AbUnCe{<:AbsTen{0,2}}} <: AbstractMPS
-    AL::AType
-    C::CType
-    AR::AType
-    AC::AType
+    struct $(FUNCTIONNAME){G<:AbstractUnitCellGeometry, AType<:AbstractTensorMap{N, 2}, CType<:AbstractTensorMap{0, 2}}
+
+Infinite boundary matrix product state (MPS) in mixed canonical form. MPS tensors have `N`
+"physical" indices.
+Has fields `AL`, `C`, `AR` and derived field `AC` such that
+```math
+A_L(x,y) C_(x,y) \\approx C(x - 1, y) A_R(x, y) \\approx AC(x, y) \\forall x,y \\in \\Lambda
+```
+where ``\\Lambda`` defines the unit cell of geometry `G`.
+
+# Examples
+
+```jldoctest
+julia> physbonds = UnitCell(fill(ComplexSpace(2), 3, 3))
+julia> virtbonds = UnitCell(fill(ComplexSpace(3), 3, 3))
+julia> mps = MPS(rand, ComplexF64, physbonds, virtbonds)
+julia> AL, C, AR, AC = mps
+```
+
+"""
+struct MPS{G, AType<:TenAbs{2}, CType<:AbsTen{0,2}} <: AbstractMPS
+    AL::UnitCell{G, AType, Matrix{AType}}
+    C::UnitCell{G, CType, Matrix{CType}}
+    AR::UnitCell{G, AType, Matrix{AType}}
+    AC::UnitCell{G, AType, Matrix{AType}}
     function MPS(
-        AL::AType, C::CType, AR::AType, AC::AType
-    ) where {AType<:AbstractUnitCell,CType<:AbstractUnitCell}
+        AL::UA, C::UC, AR::UA, AC::UA
+    ) where {G, AType, UA<:AbstractUnitCell{G, AType},CType, UC<:AbstractUnitCell{G, CType}}
         check_size_allequal(AL, C, AR, AC)
-        mps = new{AType,CType}(AL, C, AR, AC)
+        mps = new{G, AType,CType}(AL, C, AR, AC)
         validate(mps)
         return mps
     end
-    function MPS(
-        AL::AType, C::CType, AR::AType, AC::AType
-    ) where {AType<:SubUnitCell,CType<:SubUnitCell}
-        mps = new{AType,CType}(AL, C, AR, AC)
-        return mps
-    end
+    # function MPS(
+    #     AL::AType, C::CType, AR::AType, AC::AType
+    # ) where {AType<:SubUnitCell,CType<:SubUnitCell}
+    #     mps = new{AType,CType}(AL, C, AR, AC)
+    #     return mps
+    # end
 end
 
 # FIELD GETTERS
@@ -34,62 +52,50 @@ getcentral(mps::MPS) = mps.AC
 
 unpack(mps::AbstractMPS) = (getleft(mps), getbond(mps), getright(mps), getcentral(mps))
 
-TensorKit.scalartype(mps::AbstractMPS) = promote_type(map(scalartype, unpack(mps))...)
+function TensorKit.scalartype(mps::MPS{G, AType, CType}) where {G, AType, CType}
+    return promote_type(scalartype(AType),scalartype(AType))
+end
 
 # BASE
 
 Base.size(mps::AbstractMPS) = size(getcentral(mps))
-Base.length(mps::AbstractMPS) = size(mps)[2]
-Base.similar(mps::M) where {M<:MPS} = MPS(similar.(unpack(mps))...)::M
+Base.length(mps::AbstractMPS) = 4
+Base.similar(mps::M) where {M<:MPS} = MPS(similar.(mps)...)::M
 
 function TensorKit.rand!(mps::MPS)
-    AL, C, AR, AC = unpack(mps)
+    AL, C, AR, AC = mps
     rand!.(AC)
     mixedgauge!(AL, C, AR, AC)
     return mps
 end
 
-function Base.getindex(mps::AbstractMPS, y::Int)
-    AL, C, AR, AC = unpack(mps)
-    @views begin
-        subAL = AL[:, y]
-        subC = C[:, y]
-        subAR = AR[:, y]
-        subAC = AC[:, y]
-    end
-    return MPS(subAL, subC, subAR, subAC)
-end
-
 function Base.iterate(mps::AbstractMPS, state=1)
-    if state > length(mps)
+    if state > 4
         return nothing
     else
-        return mps[state], state + 1
+        return unpack(mps)[state], state + 1
     end
 end
-
-function Base.transpose(M::MPS)
-    return transpose.(unpack(M))
-end
+Base.transpose(M::MPS) = map(transpose, unpack(M))
 
 # GAUGING
 
 function isgauged(mps::AbstractMPS)
     ch_isassigned = arr -> all(x -> x, isassigned.(Ref(arr), CartesianIndices(arr)))
 
-    for single_mps in mps
-        unp = unpack(single_mps)
-        if all(x -> ch_isassigned(x), unp)
-            AL, C, AR, AC = unp
+    if all(x -> ch_isassigned(x), mps)
+        AL, C, AR, AC = mps
+        for y in axes(AL, 2)
             for x in axes(AL, 1)
-                if !(mulbond(AL[x], C[x]) ≈ mulbond(C[x - 1], AR[x]) ≈ AC[x])
+                if !(mulbond(AL[x, y], C[x, y]) ≈ mulbond(C[x - 1, y], AR[x, y]) ≈ AC[x, y])
                     return 0
                 end
             end
-        else
-            return -1
         end
+    else
+        return -1
     end
+
     return 1
 end
 
@@ -107,13 +113,9 @@ end
 
 # CONSTRUCTORS
 
-# function MPS(f, T, lattice, D, χ; kwargs...)
-#     return MPS(f, T, _fill_all_maybe(lattice, D, χ)...; kwargs...)
-# end
-
-function MPS(f, T, D::AbstractUnitCell, right_bonds::AbstractUnitCell)
-    left_bonds = circshift(right_bonds, (1, 0))
-    data_lat = @. f(T, D, right_bonds * adjoint(left_bonds))
+function MPS(f, T::Type{<:Number}, physbonds::AbstractUnitCell, rightbonds::AbstractUnitCell)
+    leftbonds = circshift(rightbonds, (1, 0))
+    data_lat = @. f(T, physbonds, rightbonds * adjoint(leftbonds))
     return MPS(data_lat)
 end
 

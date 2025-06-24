@@ -279,21 +279,26 @@ function ctmrgmove!(ctmrg::CornerMethodTensors, bonddim; kwargs...)
     return ctmrg
 end
 
-swapvirtual(t::AbstractTensorMap) = permutedom(t, (2, 1))
-
 # function flipaxis(t::TensorPair)
 #     return TensorPair(permutedom(t.top, (3, 2, 1, 4)), permutedom(t.bot, (3, 2, 1, 4)))
 # end
 
-function contract(ctmrg::CornerMethodRuntime, network, i1::UnitRange, i2::UnitRange)
-    return contract(ctmrg.primary, network, i1, i2)
+function _contract(network, ctmrg::CornerMethodRuntime, i1, i2)
+    return _contract(network, ctmrg.primary, i1, i2)
 end
-function contract(ctmrg::CornerMethodTensors, network, i1::UnitRange, i2::UnitRange)
+function _contract(network_top, network_bot, ctmrg::CornerMethodRuntime, i1, i2)
+    return _contract(network_top, network_bot, ctmrg.primary, i1, i2)
+end
+function _contract(network, ctmrg::CornerMethodTensors, i1, i2)
     cs = getboundary(ctmrg.corners, i1, i2)
     es = map(x -> tuple(x...), getboundary(ctmrg.edges, i1, i2))
     return _contractall(cs..., es..., network)
 end
-
+function _contract(network_top, network_bot, ctmrg::CornerMethodTensors, i1, i2)
+    cs = getboundary(ctmrg.corners, i1, i2)
+    es = map(x -> tuple(x...), getboundary(ctmrg.edges, i1, i2))
+    return _contractall(cs..., es..., network_top, network_bot)
+end
 function testctmrg(data_func; T=Float64, D=10)
     βc = log(1 + sqrt(2)) / 2
 
@@ -332,7 +337,7 @@ function testctmrg(data_func; T=Float64, D=10)
     #     fpcm=algf,
     #     dofpcm=AtFrequency(5),
     # )
-    # alg = VUMPS(; bonddim=D, verbose=true, maxiter=200)
+    alg = VUMPS(; bonddim=D, verbose=true, maxiter=200)
 
     # randgauge! =
     #     (p, X, Y) -> @tensoropt p[a b c d] =
@@ -360,7 +365,7 @@ function testctmrg(data_func; T=Float64, D=10)
 
         cb = (st, args...) -> println(contract(st.tensors, b2) ./ contract(st.tensors, b1))
 
-        state = newrenormalization(alg, b1)#; callback=cb)
+        state = Renormalization(b1, alg)#; callback=cb)
 
         did_converge = false
 

@@ -12,9 +12,40 @@ tensortype(args::Type) = throw(MethodError(tensortype, (args,)))
 tensortype(T::Type{<:AbstractTensorMap}) = T
 tensortype(::Type{<:AbUnCe{T}}) where {T} = tensortype(T)
 
+"""
+$(TYPEDEF)
+
+Singleton type representing a standard square lattice geometry with coordination number 4.
+"""
 struct Square <: AbstractUnitCellGeometry end
+
+"""
+$(TYPEDEF)
+
+Singleton type representing a square lattice with reverse cyclic symmetry. For (2,2) unit
+cell sizes, this defines a checkerboard lattice geometry.
+
+# Examples
+
+```jldoctest
+julia> UnitCell{SquareSymmetric}([1 2 3; 2 3 1; 3 1 2])
+3×3 UnitCell{SquareSymmetric, Int64, Matrix{Int64}}:
+ 1  2  3
+ 2  3  1
+ 3  1  2
+
+julia> UnitCell{SquareSymmetric}([1 2; 3 4])
+ERROR: ArgumentError: data does not have the required cyclic symmetry for this lattice geometry.
+```
+"""
 struct SquareSymmetric <: AbstractUnitCellGeometry end
 
+"""
+$(TYPEDEF)
+
+Container `AbstractMatrix` type with periodic boundary conditions, and a lattice geometry 
+specific by type parameter `G`.
+"""
 struct UnitCell{G<:AbstractUnitCellGeometry,ElType,A} <: AbstractUnitCell{G,ElType,A}
     data::CircularArray{ElType,2,A}
     UnitCell{G,T,A}(data::CircularArray{T,2,A}) where {G,T,A} = new{G,T,A}(data)
@@ -24,19 +55,19 @@ struct UnitCell{G<:AbstractUnitCellGeometry,ElType,A} <: AbstractUnitCell{G,ElTy
         if ny > 1
             if nx == ny
                 for i in 2:ny
-                    # if !all(data[:, 1] .== circshift(data[:, i], -(i - 1)))
-                    #     throw(
-                    #         ArgumentError(
-                    #             "data does not have the required cyclic symmetry for this lattice geometry",
-                    #         ),
-                    #     )
-                    # end
+                    if !all(data[:, 1] .== circshift(data[:, i], (i - 1)))
+                        throw(
+                            ArgumentError(
+                                "data does not have the required cyclic symmetry for this lattice geometry.",
+                            ),
+                        )
+                    end
                 end
             else
                 if nx == 1
                     data = permutedims(data)
                 else
-                    throw(ArgumentError("data not square"))
+                    throw(ArgumentError("data not square."))
                 end
             end
         end
@@ -54,11 +85,18 @@ end
 UnitCell(uc::UnitCell) = uc
 UnitCell{SquareSymmetric}(vec::AbstractVector) = UnitCell{SquareSymmetric}(hcat(vec))
 
-@inline getdata(uc::UnitCell{G,T,A}) where {G,T,A} = uc.data::CircularArray{T,2,A}
+getdata(uc::UnitCell{G,T,A}) where {G,T,A} = uc.data::CircularArray{T,2,A}
 
-@inline datatype(::Type{<:AbstractUnitCell{G,ElType,A}}) where {G,ElType,A} = A
-@inline datatype(U::Type) = U
+datatype(::Type{<:AbstractUnitCell{G,ElType,A}}) where {G,ElType,A} = A
+datatype(U::Type) = U
 
+"""
+    $(FUNCTIONNAME)(::AbstractUnitCell) -> Type{G}
+    $(FUNCTIONNAME)(::Type{<:AbstractUnitCell}) -> Type{G}
+
+Return the geometry type `G` of a unit cell.
+"""
+geometrytype(uc::AbstractUnitCell{G}) where {G} = geometrytype(typeof(uc))
 geometrytype(::Type{<:AbstractUnitCell{G}}) where {G} = G
 
 ## ABSTRACT ARRAY
@@ -226,6 +264,12 @@ tocircular(data::CircularArray) = data
 tocircular(data::AbstractUnitCell) = getdata(data)
 
 # Make circular
+"""
+    $(FUNCTIONNAME)(data::AbstractMatrix) -> UnitCell{Square}
+    $(FUNCTIONNAME){G}(data::AbstractMatrix) -> UnitCell{G}
+
+Construct a unit cell with elements given by the elements of `data`.
+"""
 UnitCell(data) = UnitCell{Square}(data)
 UnitCell{G}(data) where {G} = UnitCell{G}(tocircular(data))
 

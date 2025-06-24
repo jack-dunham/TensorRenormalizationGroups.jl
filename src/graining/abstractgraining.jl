@@ -1,2 +1,2 @@
-abstract type AbstractGrainingAlgorithm <: AbstractAlgorithm end
-abstract type AbstractGrainingRuntime <: AbstractRuntime end
+abstract type AbstractGrainingAlgorithm <: AbstractRenormalizationAlgorithm end
+abstract type AbstractGrainingRuntime <: AbstractRenormalizationRuntime end

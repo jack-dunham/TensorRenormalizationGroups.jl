@@ -1,6 +1,6 @@
 @testsetup module SetupUnitCell
 using Reexport
-@reexport using TensorKit, InfiniteTensorContractions, TestExtras, CircularArrays
+@reexport using TensorKit, TensorRenormalizationGroups, TestExtras, CircularArrays
 end
 
 @testitem "UnitCell" setup = [SetupUnitCell] begin
