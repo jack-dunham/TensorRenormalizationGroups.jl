@@ -1,3 +1,11 @@
+"""
+*A Julia package implementing various two-dimensional tensor renormalization group-like
+algorithms under a single interface. Designed to be application agnostic. 
+Based on [TensorKit.jl](https://github.com/Jutho/TensorKit.jl).*
+
+!!! note
+    This documentation is a work in progress.
+"""
 module TensorRenormalizationGroups
 const TRGroups = TensorRenormalizationGroups
 
@@ -40,10 +48,14 @@ export AbstractCornerMethod
 export CornerMethodTensors, CornerMethodRuntime, Corners, Edges
 export corners, edges
 
+# GRAINING
+export TRGRuntime
+
 export getboundary
 
 # INTERFACE
-export initialize, renormalize!, contract
+export renormalize!, contract
+public continue!, reset!, recycle!, restart!
 
 # No deps
 include("convergenceinfo.jl")

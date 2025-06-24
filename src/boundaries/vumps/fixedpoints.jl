@@ -1,7 +1,13 @@
 # DONE (NEEDS RESTRUCTURING)
 abstract type AbstractFixedPoints end
 
-# Fixed points of a transfer matrix
+"""
+$(TYPEDEF)
+
+Left and right fixed points of the transfer matrix formed from each row-to-row transfer
+matrix sandwiched between the a boundary MPS and it's adjoint. This struct has two fields
+`:left` and `:right` which can be accessed directly.
+"""
 struct FixedPoints{A<:AbUnCe{<:TenAbs{2}}} <: AbstractFixedPoints
     left::A
     right::A
@@ -18,6 +24,16 @@ function FixedPoints(f, mps::MPS, network::AbstractNetwork)
     right = initright.(f, mps_tensor, network)
 
     return FixedPoints(left, right)
+end
+
+function Base.iterate(ct::FixedPoints, state=1)
+    if state == 1
+        return ct.left, state + 1
+    elseif state == 1
+        return ct.right, state + 1
+    elseif state > 2
+        return nothing
+    end
 end
 
 Base.similar(fps::FixedPoints) = FixedPoints(similar(fps.left), similar(fps.right))
@@ -71,6 +87,13 @@ end
 #     @tensoropt hc[dr dl] = cu[ur ul] * fl[m1 m2; ul dl] * fr[m1 m2; ur dr] * conj(cd[dr dl])
 # end
 
+"""
+    $(FUNCTIONNAME)(mps::MPS, network::AbstractUnitCell [,f0::FixedPoints]) -> FixedPoints
+
+Compute the left and right fixed points of the transfer matrix defined by sandwiching each
+row of `network` between `mps` and it's `adjoint`. If `f0` is provided, use it as an initial
+guess.
+"""
 function fixedpoints(mps::MPS, network, f0=FixedPoints(rand, mps, network))
     return fixedpoints!(f0, mps, network)
 end

@@ -37,6 +37,13 @@ $(TYPEDFIELDS)
     end
 end
 
+"""
+$(TYPEDEF)
+
+# Fields
+
+$(TYPEDFIELDS)
+"""
 struct VUMPSRuntime{
     G,
     AType,
@@ -44,8 +51,11 @@ struct VUMPSRuntime{
     FType<:AbstractUnitCell,
     SType<:AbstractUnitCell,
 } <: AbstractBoundaryRuntime
+    "The boundary matrix product state (MPS)"
     mps::MPS{G, AType,CType}
+    "Left and right fixed points of the transfer matrix"
     fixedpoints::FixedPoints{FType}
+    "Singular values used to compute the convergence measure"
     svals::SType
 end
 

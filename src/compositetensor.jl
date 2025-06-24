@@ -2,7 +2,7 @@
     CompositeTensor{M,T,S<:IndexSpace,N₁,N₂, ...} <: AbstractTensorMap{T,S,N₁,N₂}
 
 Subtype of `AbstractTensorMap` for representing a M-layered tensor map, e.g. a 
-tensor and its conjugate.
+tensor and it's conjugate.
 """
 struct CompositeTensor{M,T,S,N₁,N₂,A<:TensorMap{T,S,N₁,N₂},F<:Tuple} <:
        AbstractTensorMap{T,S,N₁,N₂}
@@ -40,7 +40,7 @@ Base.length(::CompositeTensor{M}) where {M} = M
 Base.map(func, ct::CompositeTensor) = map((ten, af) -> func(af(ten)), ct.layers, ct.funcs)
 
 """
-    mapbefore(ct::CompositeTensor{M}) -> NTuple{M}
+    mapbefore(f, ct::CompositeTensor{M}) -> NTuple{M}
 
 Apply function 'f' to every tensor in `ct` *before* appying each associated composite tensor
 function.

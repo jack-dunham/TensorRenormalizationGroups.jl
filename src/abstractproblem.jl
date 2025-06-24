@@ -1,4 +1,15 @@
+"""
+$(TYPEDEF)
+
+Abstract supertype of all algorithms available in this package.
+"""
 abstract type AbstractRenormalizationAlgorithm end
+
+"""
+$(TYPEDEF)
+
+Abstract supertype of all algorithm-specific runtime state objects.
+"""
 abstract type AbstractRenormalizationRuntime end
 
 """
@@ -13,22 +24,24 @@ $(TYPEDFIELDS)
 
 # Constructors
 
-    Renormalization(network::AbstractMatrix, alg::AbstractRenormalizationAlgorithm, [initial::AbstractRenormalizationRuntime])
+    $(FUNCTIONNAME)(network::AbstractMatrix, alg::AbstractRenormalizationAlgorithm, [initial::AbstractRenormalizationRuntime])
 
 A new instance of `Renormalization` is constructed by passing `network` and 
 (optionally) an initial runtime object, as well as the chosen `alg`. 
 If `initial` is specified, `convertproblem` will be called to attempt to make
 `initial` compatible with `alg`.
 
-Note, `Renormalization` will *always* be constructed using a `copy` of `network`, but
-*not* a `deepcopy`. That is, one can mutate the `network` struct using `setindex!` with
-out mutating the constructed `Renormalization`, but mutating the tensor elements 
-themselves *will* propagate through to this struct.
-
-    Renormalization(network::AbstractMatrix, problem::Renormalization)
+    $(FUNCTIONNAME)(network::AbstractMatrix, problem::Renormalization)
 
 Constuct a new instance of `Renormalization` using the algorithm and runtime from
 existing `problem`.
+
+!!! warn
+    `Renormalization` will *always* be constructed using a `copy` of `network`, but
+    *not* a `deepcopy`. That is, one can mutate the `network` struct using `setindex!` with
+    out mutating the constructed `Renormalization`, but mutating the tensor elements 
+    themselves *will* propagate through to this struct.
+
 """
 struct Renormalization{
     Alg<:AbstractRenormalizationAlgorithm,

@@ -1,6 +1,19 @@
+"""
+$(TYPEDEF)
+
+Runtime objects containing state of a [`TRG`](@ref) algorithm. 
+The current cumulative value of the contraction can be obtained using the field `:`
+
+# Fields
+
+$(TYPEDFIELDS)
+"""
 struct TRGRuntime{AType,SType} <: AbstractGrainingRuntime
+    "Coarse-grained tensors at the current stage of the algorithms runtime."
     tensors::AType
+    "Singular values used for computing convergence tolerance."
     svals::SType
+    "The current cumulative value of the contraction with respect to each tensor in the unit cell."
     cumsum::Matrix{Float64}
 end
 

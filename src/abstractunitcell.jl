@@ -1,4 +1,16 @@
+"""
+$(TYPEDEF)
+
+Abstract supertype of all unit cell lattice geometries.
+"""
 abstract type AbstractUnitCellGeometry end
+
+"""
+$(TYPEDEF)
+
+Abstract supertype of all unit cells (periodic boundary conditions) defined on a lattice 
+with geometry `G`.
+"""
 abstract type AbstractUnitCell{G<:AbstractUnitCellGeometry,ElType,A} <:
               AbstractMatrix{ElType} end
 
@@ -7,6 +19,12 @@ basedata(arr::AbstractUnitCell) = basedata(getdata(arr))
 
 const AbUnCe{T,G,A} = AbstractUnitCell{G,T,A}
 
+"""
+$(FUNCTIONNAME)(x) -> AbstractTensorMap
+
+Return the type of tensor associated with object `x`, if any. Similar to `eltype` for container
+types but always returns an `AbstractTensorMap`. Defined in both the value and type domains.
+"""
 tensortype(val) = tensortype(typeof(val))
 tensortype(args::Type) = throw(MethodError(tensortype, (args,)))
 tensortype(T::Type{<:AbstractTensorMap}) = T

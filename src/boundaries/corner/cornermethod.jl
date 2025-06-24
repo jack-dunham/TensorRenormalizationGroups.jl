@@ -1,3 +1,8 @@
+"""
+$(TYPEDEF)
+
+Abstract supertype of all corner-based boundary methods.
+"""
 abstract type AbstractCornerMethod <: AbstractBoundaryAlgorithm end
 
 struct Projectors{A<:AbstractUnitCell}
@@ -14,10 +19,22 @@ function Base.getindex(p::Projectors, i::Int64)
     return tup[i]
 end
 
+"""
+$(TYPEDEF)
+
+Struct containing the corner tensors C1, C2, C3 and C4 stored in it's only field `:data` as
+a tuple in that order.
+"""
 struct Corners{C<:AbstractUnitCell}
     data::NTuple{4,C}
 end
 
+"""
+$(TYPEDEF)
+
+Struct containing the edge tensors T1, T2, T3 and T4 stored in it's only field `:data` as
+a tuple in that order.
+"""
 struct Edges{E<:AbstractUnitCell}
     data::NTuple{4,E}
 end
@@ -50,6 +67,12 @@ end
 
 TensorKit.scalartype(::Type{<:FourTupleLike{A}}) where {A} = scalartype(A)
 
+"""
+$(TYPEDEF)
+
+Concreate struct containing tensors required for a corner method. Fields are not public. 
+Tensors can be accessed using the field getters [`corners`](@ref) and [`edges`](@ref).
+"""
 struct CornerMethodTensors{C<:Corners,E<:Edges,P<:Projectors,N<:AbstractNetwork}
     corners::C
     edges::E
@@ -58,13 +81,30 @@ struct CornerMethodTensors{C<:Corners,E<:Edges,P<:Projectors,N<:AbstractNetwork}
 end
 geometrytype(::Type{CornerMethodTensors{C,E,P,N}}) where {C,E,P,N} = geometrytype(N)
 
+"""
+    $(FUNCTIONNAME)(x::Union{CornerMethodTensors, CornerMethodRuntime}) -> Corners
+
+Return the corner tensors associated with the object `x`.
+"""
 corners(t::CornerMethodTensors) = t.corners
+
+"""
+    $(FUNCTIONNAME)(x::Union{CornerMethodTensors, CornerMethodRuntime}) -> Edges
+
+Return the edge tensors associated with the object `x`.
+"""
 edges(t::CornerMethodTensors) = t.edges
 
 function TensorKit.scalartype(::Type{<:CornerMethodTensors{C,E}}) where {C,E}
     return promote_type(scalartype(C), scalartype(E))
 end
 
+"""
+$(TYPEDEF)
+
+Runtime state of a corner method renormalization algorithm. Fields are not public. 
+Tensors can be accessed using the field getters [`corners`](@ref) and [`edges`](@ref).
+"""
 struct CornerMethodRuntime{T<:CornerMethodTensors,S<:CornerSingularValues} <:
        AbstractRenormalizationRuntime
     primary::T

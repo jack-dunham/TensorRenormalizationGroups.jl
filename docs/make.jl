@@ -6,7 +6,11 @@ makedocs(
     authors="Jack Dunham",
     pages=[
         "Home" => "index.md",
-        "Library" => "library.md",
+        "Library" => [
+            "Computing and contracting" => "renormalize.md",
+            "Defining tensor networks" => "networks.md",
+            "Algorithms" => "algorithms.md",
+        ],
         "Index" => "_index.md"
     ]
 )

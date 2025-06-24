@@ -1,4 +1,15 @@
+"""
+$(TYPEDEF)
+
+Abstract supertype of all boundary algorithms
+"""
 abstract type AbstractBoundaryAlgorithm <: AbstractRenormalizationAlgorithm end
+
+"""
+$(TYPEDEF)
+
+Abstract supertype of all boundary runtime objects.
+"""
 abstract type AbstractBoundaryRuntime <: AbstractRenormalizationRuntime end
 
 function boundaryerror!(S_old::AbstractMatrix, C_new::AbstractMatrix)

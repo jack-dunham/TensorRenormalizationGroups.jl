@@ -1,6 +1,18 @@
+"""
+    $(FUNCTIONNAME)(problem::Renormalization) -> AbstractUnitCell
+
+Contract around each tensor in `problem.network` using the boundary specified in `problem`,
+returning a unit cell of the values.
+"""
 function contract(problem::Renormalization, inds...)
     return contract(problem.network, problem, inds...)
 end
+
+"""
+    $(FUNCTIONNAME)(network::AbstractArray, boundary::Union{Renormalization, AbstractBoundaryRuntime}) -> AbstractArray
+
+Contract around each tensor in `network` using `boundary`, returning an array of the values.
+"""
 function contract(network::AbstractMatrix, boundary)
     return contract(network, boundary, CartesianIndices(network))
 end
@@ -16,6 +28,15 @@ function contract(network::AbstractMatrix, boundary, inds::CartesianIndices{2})
     return rv
 end
 
+"""
+    $(FUNCTIONNAME)(problem::Renormalization, i1, i2) -> Number
+    $(FUNCTIONNAME)(network::AbstractArray, boundary::Union{Renormalization, AbstractBoundaryRuntime}, i1, i2) -> Number
+
+Peforming a multi-tensor contraction on the contiguous region `network[i1, i2]` using the 
+boundary tensors from `boundary` specificed by `i1` and `i2`. The arguments `i1` and `i2` 
+are usual `AbstractArray` indices, however one must have 
+`length(i1), length(i2) == size(network)`. The former method contracts `problem.network`.
+"""
 function contract(bulk::AbstractArray, boundary, inds...)
     return contract(bulk, boundary, to_indices(bulk, (inds))...)
 end

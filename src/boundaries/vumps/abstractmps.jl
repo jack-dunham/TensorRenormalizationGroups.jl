@@ -8,17 +8,19 @@ Infinite boundary matrix product state (MPS) in mixed canonical form. MPS tensor
 "physical" indices.
 Has fields `AL`, `C`, `AR` and derived field `AC` such that
 ```math
-A_L(x,y) C_(x,y) \\approx C(x - 1, y) A_R(x, y) \\approx AC(x, y) \\forall x,y \\in \\Lambda
+A_L(x,y) C(x,y) \\approx C(x - 1, y) A_R(x, y) \\approx AC(x, y) \\quad \\forall x,y \\in \\Lambda
 ```
 where ``\\Lambda`` defines the unit cell of geometry `G`.
 
 # Examples
 
-```jldoctest
-julia> physbonds = UnitCell(fill(ComplexSpace(2), 3, 3))
-julia> virtbonds = UnitCell(fill(ComplexSpace(3), 3, 3))
-julia> mps = MPS(rand, ComplexF64, physbonds, virtbonds)
-julia> AL, C, AR, AC = mps
+```@repl
+using TensorKit
+physbonds = UnitCell(fill(ComplexSpace(2), 2, 1))
+virtbonds = UnitCell(fill(ComplexSpace(3), 2, 1))
+mps = MPS(rand, ComplexF64, physbonds, virtbonds);
+AL, C, AR, AC = mps;
+C
 ```
 
 """
