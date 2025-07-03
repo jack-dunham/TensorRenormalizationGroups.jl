@@ -1,6 +1,7 @@
 @testsetup module SetupCTMRG
 using Reexport
 @reexport using TensorKit, TensorRenormalizationGroups, TestExtras, CircularArrays
+@reexport import TensorRenormalizationGroups.KrylovKit.initialize
 end
 
 @testitem "Corner Methods" setup = [SetupCTMRG] begin
@@ -34,7 +35,7 @@ end
 
     @test scalartype(corners) == ComplexF64
 
-    @test ITC.chispace(corners) == s
+    @test TRGroups.chispace(corners) == s
 end
 
 @testitem "CTMRG" setup = [SetupCTMRG] begin
@@ -52,10 +53,10 @@ end
 
     alg = CTMRG(; verbose=false, bonddim=1, randinit=false)
 
-    uc = ITC.ensure_contractable(net)
+    uc = TRGroups.ensure_contractable(net)
 
     @testset "Initialization" verbose = true begin
-        ten = @constinferred(ITC.inittensors(uc, alg))
+        ten = @constinferred(TRGroups.inittensors(uc, alg))
 
         st = @constinferred(initialize(uc, alg))
 
@@ -65,22 +66,22 @@ end
 
         for sp in convert.(ProductSpace, domain(ta))
             for ch in convert.(ProductSpace, (ℂ^2, sp, ℂ^6))
-                eiso = @constinferred(ITC.get_embedding_isometry(sp, ch))
+                eiso = @constinferred(TRGroups.get_embedding_isometry(sp, ch))
 
                 @test codomain(eiso) == sp
                 @test domain(eiso) == ch
             end
-            riso = @constinferred(ITC.get_removal_isometry(sp))
+            riso = @constinferred(TRGroups.get_removal_isometry(sp))
 
             @test codomain(riso) == sp
             @test domain(riso) == one(sp)
         end
 
-        c_raw = @constinferred(ITC.initcorners(uc, chi))
-        e_raw = @constinferred(ITC.initedges(uc, chi))
+        c_raw = @constinferred(TRGroups.initcorners(uc, chi))
+        e_raw = @constinferred(TRGroups.initedges(uc, chi))
 
-        @constinferred(ITC.randomize_if_zero!(c_raw))
-        @constinferred(ITC.randomize_if_zero!(e_raw))
+        @constinferred(TRGroups.randomize_if_zero!(c_raw))
+        @constinferred(TRGroups.randomize_if_zero!(e_raw))
 
         C1, C2, C3, C4 = c_raw
         T1, T2, T3, T4 = c_raw
@@ -111,18 +112,18 @@ end
     end
 
     @testset "Error calculation" verbose = true begin
-        corn = ITC.initcorners(uc, chi)
+        corn = TRGroups.initcorners(uc, chi)
         state = initialize(uc, alg)
 
-        Ss = @constinferred(ITC.initerror(state.primary))
+        Ss = @constinferred(TRGroups.initerror(state.primary))
         Ss_old = deepcopy(Ss)
 
-        @test isa(@constinferred(ITC.ctmerror!(Ss, corn)), AbstractFloat)
+        @test isa(@constinferred(TRGroups.ctmerror!(Ss, corn)), AbstractFloat)
         # Singular values should have updated:
         @test Ss !== Ss_old
         # Should get zero error with corners unchanged:
         C1, C2, C3, C4 = corn
-        @test @constinferred(ITC.boundaryerror!(Ss[1], C1)) ≈ zero.(eltype.(C1))
+        @test @constinferred(TRGroups.boundaryerror!(Ss[1], C1)) ≈ zero.(eltype.(C1))
 
     end
 end

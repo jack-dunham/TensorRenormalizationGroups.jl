@@ -24,26 +24,26 @@ end
     test_t = (p1, p2, p3)
 
     @testset "Utils" verbose = true begin
-        @test space(ITC._transpose(t)) == ((s4' * s5') ← (s2' * s3'))
-        @test @constinferred(convert(Array, ITC._transpose(t))) ==
+        @test space(TRGroups._transpose(t)) == ((s4' * s5') ← (s2' * s3'))
+        @test @constinferred(convert(Array, TRGroups._transpose(t))) ==
             permutedims(convert(Array, t), (3, 4, 1, 2))
-        @test @constinferred(ITC.permutedom(t, (2, 1))) == permute(t, (1, 2), (4, 3))
-        @test @constinferred(ITC.permutecod(t, (2, 1))) == permute(t, (2, 1), (3, 4))
+        @test @constinferred(TRGroups.permutedom(t, (2, 1))) == permute(t, (1, 2), (4, 3))
+        @test @constinferred(TRGroups.permutecod(t, (2, 1))) == permute(t, (2, 1), (3, 4))
 
         perm = [1:10...]
 
-        @test isa(@constinferred(ITC.tcircshift(Tuple(perm), 0)), NTuple{10,Int})
+        @test isa(@constinferred(TRGroups.tcircshift(Tuple(perm), 0)), NTuple{10,Int})
 
         for i in (-1, 0, 1)
-            @test ITC.tcircshift(Tuple(perm), i) == Tuple(circshift(perm, i))
+            @test TRGroups.tcircshift(Tuple(perm), i) == Tuple(circshift(perm, i))
         end
 
         for tn in test_t
-            @test @constinferred(ITC.rotate(tn, 0)) == tn
-            @test domain(ITC.rotate(tn, 1)) == s5' * s2 * s3 * s4'
+            @test @constinferred(TRGroups.rotate(tn, 0)) == tn
+            @test domain(TRGroups.rotate(tn, 1)) == s5' * s2 * s3 * s4'
         end
-        @test @constinferred(ITC.rotate(tp, 0)) == tp
-        @test domain(ITC.rotate(tp, 1)[1]) == s5' * s2 * s3 * s4'
-        @test codomain(ITC.rotate(tp, 1)[2]) == s5' * s2 * s3 * s4'
+        @test @constinferred(TRGroups.rotate(tp, 0)) == tp
+        @test domain(TRGroups.rotate(tp, 1)[1]) == s5' * s2 * s3 * s4'
+        @test codomain(TRGroups.rotate(tp, 1)[2]) == s5' * s2 * s3 * s4'
     end
 end

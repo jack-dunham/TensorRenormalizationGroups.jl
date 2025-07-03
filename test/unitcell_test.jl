@@ -47,7 +47,7 @@ end
         @test isa(ucc .* matf, TC)
     end
     @testset "Misc" begin
-        @test isa(ITC.getdata(ucf), CircularArray)
-        @test ITC.datatype(TF) == Matrix{Float64}
+        @test isa(TRGroups.getdata(ucf), CircularArray)
+        @test TRGroups.datatype(TF) == Matrix{Float64}
     end
 end

@@ -24,17 +24,17 @@ end
         cl = C[1, 1]
         cr = C[0, 1]
 
-        @test isa(ITC._similar_ac(a, cl), typeof(a))
-        @test isa(ITC._similar_ac(cr, a), typeof(a))
+        @test isa(TRGroups._similar_ac(a, cl), typeof(a))
+        @test isa(TRGroups._similar_ac(cr, a), typeof(a))
 
-        @test ITC.centraltensor(C, A)[1, 1] == ITC.mulbond(cr, a)
-        @test ITC.centraltensor(A, C)[1, 1] == ITC.mulbond(a, cl)
+        @test TRGroups.centraltensor(C, A)[1, 1] == TRGroups.mulbond(cr, a)
+        @test TRGroups.centraltensor(A, C)[1, 1] == TRGroups.mulbond(a, cl)
 
         mps = @constinferred(MPS(A))
         @test @constinferred(scalartype(mps)) == T
 
         AL, C, AR, AC = mps
-        @test all((AL, C, AR, AC) == ITC.unpack(mps))
+        @test all((AL, C, AR, AC) == TRGroups.unpack(mps))
         @testset "Mixed canonical form" begin
             let mps = MPS(rand, T, ds, χs1), C = mps.C
                 AL, C, AR, AC = mps
@@ -43,13 +43,20 @@ end
 
             mps = @constinferred(MPS(rand, T, ds, χs))
 
-            for uc in ITC.unpack(mps)
-                @test ITC.scalartype(uc) == T
+            physbonds = UnitCell{SquareSymmetric}(fill(ComplexSpace(2), 2, 2))
+            virtbonds = UnitCell{SquareSymmetric}(fill(ComplexSpace(2), 2, 2))
+            mps_sym = MPS(rand, T, physbonds, virtbonds)
+
+            @test TRGroups.geometrytype(mps_sym.C) == SquareSymmetric
+
+            for uc in TRGroups.unpack(mps)
+                @test TRGroups.scalartype(uc) == T
             end
 
-            @test ITC.isgauged(mps) == 1
-            @test ITC.isgauged(MPS(A, C, A, A)) == 0
-            @test ITC.isgauged(MPS(similar(A), C, A, A)) == -1
+            @test TRGroups.isgauged(mps) == 1
+            @test TRGroups.isgauged(mps_sym) == 1
+            @test TRGroups.isgauged(MPS(A, C, A, A)) == 0
+            @test TRGroups.isgauged(MPS(similar(A), C, A, A)) == -1
         end
     end
 end

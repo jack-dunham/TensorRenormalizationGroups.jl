@@ -5,7 +5,9 @@ using Random
 
 Random.seed!(1234)
 
-export classicalisingmpo, exactZ, isingnetwork
+import TensorRenormalizationGroups.KrylovKit.initialize
+
+export classicalisingmpo, exactZ, isingnetwork, initialize
 
 function statmechmpo(β, h, D)
     δ1 = zeros(D, D, D, D)
