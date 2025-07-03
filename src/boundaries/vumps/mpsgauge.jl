@@ -117,13 +117,12 @@ end
 
 # Find the mixedguage of uniform MPS A, writing result into AL,C,AR
 function mixedgauge!(AL, C, AR, A; verbose=false, kwargs...)
-    for y in axes(A, 2)
+    for y in axes(eachindex(A), 2)
         verbose && @info "Gauging right..."
         rightgauge!(AR[:, y], C[:, y], A[:, y]; verbose=verbose, kwargs...)
         verbose && @info "Gauging left..."
         leftgauge!(AL[:, y], C[:, y], AR[:, y]; verbose=verbose, kwargs...)
     end
-    # currently not working 
     diagonalise!(AL, C, AR)
     return AL, C, AR
 end
@@ -137,7 +136,7 @@ function diagonalise!(
     U = similar(C)
     V = similar(C)
 
-    for y in axes(C, 2)
+    for y in axes(eachindex(C), 2)
         for x in axes(C, 1)
             U[x, y], C[x, y], V[x, y] = _tsvd(C[x, y])
         end
