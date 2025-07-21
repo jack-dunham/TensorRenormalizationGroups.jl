@@ -1,4 +1,9 @@
-@testset "UnitCell" verbose = true begin
+@testsetup module SetupUnitCell
+using Reexport
+@reexport using TensorKit, TensorRenormalizationGroups, TestExtras, CircularArrays
+end
+
+@testitem "UnitCell" setup = [SetupUnitCell] begin
     TF = UnitCell{Square,Float64,Matrix{Float64}}
     TC = UnitCell{Square,ComplexF64,Matrix{ComplexF64}}
 
@@ -42,7 +47,7 @@
         @test isa(ucc .* matf, TC)
     end
     @testset "Misc" begin
-        @test isa(ITC.getdata(ucf), CircularArray)
-        @test ITC.datatype(TF) == Matrix{Float64}
+        @test isa(TRGroups.getdata(ucf), CircularArray)
+        @test TRGroups.datatype(TF) == Matrix{Float64}
     end
 end

@@ -1,22 +1,31 @@
-name = "InfiniteTensorContractions"
+name = "TensorRenormalizationGroups"
 uuid = "742c4823-a45f-4b1c-bad3-1a5bdcda2a0b"
 authors = ["jack-dunham <ucapunh@ucl.ac.uk>"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 CircularArrays = "7a955b69-7140-5f4e-a0ed-f168c5e2e749"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 
 [compat]
+CircularArrays = "1.4"
 DocStringExtensions = "0.9.3"
+KrylovKit = "0.9"
+LinearAlgebra = "1.11.0"
+Printf = "1.11.0"
 TensorKit = "0.14.4"
+julia = "1.11"
 
 [extras]
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+ReTestItems = "817f1d60-ba6b-4fd5-9520-3cf149f6a823"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 
 [targets]
-test = ["Test", "TestExtras"]
+test = ["Test", "TestExtras", "ReTestItems", "Reexport"]

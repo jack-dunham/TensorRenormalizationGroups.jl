@@ -1,18 +1,24 @@
 """
-    VUMPS <: AbstractBoundaryAlgorithm
+$(TYPEDEF)
 
-Stores the parameters for the variational uniform matrix product state (VUMPS)  boundary algorithm. 
+Stores the parameters for the variational uniform matrix product state (VUMPS) boundary algorithm. 
 
 # Fields
-- `bonddim::Int`: the bond dimension of the boundary
-- `maxiter::Int = 100`: maximum number of iterations
-- `tol::Float64 = 1e-12`: convergence tolerance
-- `verbose::Bool = true`: when true, will print algorithm convergence progress
+
+$(TYPEDFIELDS)
+
+# Constructor
+
+    $(FUNCTIONNAME)(; bonddim, maxiter=100, tol=1e-12, verbose=true)
 """
 @kwdef struct VUMPS <: AbstractBoundaryAlgorithm
+    "The bond dimension of the boundary."
     bonddim::Int
+    "Maximum number of iterations."
     maxiter::Int = 100
+    "Convergence tolerance."
     tol::Float64 = 1e-12
+    "When `true`, will print algorithm convergence progress."
     verbose::Bool = true
     function VUMPS(bonddim::Int, maxiter::Float64, tol::Float64, verbose::Bool)
         if maxiter == Inf
@@ -31,19 +37,40 @@ Stores the parameters for the variational uniform matrix product state (VUMPS)  
     end
 end
 
+"""
+$(TYPEDEF)
+
+# Fields
+
+$(TYPEDFIELDS)
+"""
 struct VUMPSRuntime{
-    AType<:AbstractUnitCell,
-    CType<:AbstractUnitCell,
+    G,
+    AType,
+    CType,
     FType<:AbstractUnitCell,
     SType<:AbstractUnitCell,
 } <: AbstractBoundaryRuntime
-    mps::MPS{AType,CType}
+    "The boundary matrix product state (MPS)"
+    mps::MPS{G, AType,CType}
+    "Left and right fixed points of the transfer matrix"
     fixedpoints::FixedPoints{FType}
+    "Singular values used to compute the convergence measure"
     svals::SType
 end
 
 function reset!(runtime::VUMPSRuntime, network)
-    fixedpoints!(runtime.fixedpoints, runtime.mps, network)
+    # rand!(runtime.mps)
+    #
+    # FL = runtime.fixedpoints.left
+    # FR = runtime.fixedpoints.left
+    #
+    # rand!.(FL)
+    # rand!.(FR)
+    #
+    #
+
+    # fixedpoints!(runtime.fixedpoints, runtime.mps, network)
     return runtime
 end
 
@@ -75,14 +102,14 @@ function KrylovKit.initialize(network, alg::VUMPS)
     fixed_points = FixedPoints(randn, boundary_mps, network)
 
     svals = broadcast(getbond(boundary_mps)) do bond
-        _, s, _, info = tsvd(bond, (1,), (2,))
+        _, s, _, _ = tsvd(bond, ((1,), (2,)))
         return s
     end
 
     return VUMPSRuntime(boundary_mps, fixed_points, svals)
 end
 
-function step!(problem::RenormalizationProblem{<:VUMPS})
+function step!(problem::Renormalization{<:VUMPS})
     return step!(problem.runtime, problem.network, problem.alg)
 end
 
@@ -104,9 +131,8 @@ function vumpsstep!(vumps::VUMPSRuntime, network; kwargs...)
     mps = vumps.mps
     fps = vumps.fixedpoints
 
-    vumpsupdate!(mps, fps, network; kwargs...) # Vectorised
-
     fixedpoints!(fps, mps, network; kwargs...)
+    vumpsupdate!(mps, fps, network; kwargs...) # Vectorised
 
     return vumps
 end
@@ -142,7 +168,7 @@ function vumpsupdate!(A::MPS, FP::FixedPoints, M; ishermitian=forcehermitian(A, 
         # @info "" normalize(1 / μ1s[1] * ACs[1][1])
         # @info "" (1 / μ1s[1] * ACs[1][1])
 
-        for y in ry
+        for y in axes(eachindex(C), 1)
             AC[x, y] = ACs[1][y]
         end
         # for y in ry
@@ -174,7 +200,7 @@ function vumpsupdate!(A::MPS, FP::FixedPoints, M; ishermitian=forcehermitian(A, 
                                                                                        μ0 =
             (μ1s[1] / μ0s[1])
 
-        for y in ry
+        for y in axes(eachindex(C), 1)
             C[x, y] = Cs[1][y]
         end
         # A[mod(y - 1, ry)].C[x] = Cs[1]
@@ -196,14 +222,14 @@ end
 # EFFECTIVE HAMILTONIANS
 
 function applyhac(z, FL::AbstractVector, FR::AbstractVector, M::AbstractVector)
-    rv = map(copy, circshift(z, -1))
+    rv = map(similar, circshift(z, -1))
     applyhac!.(rv, z, FL, FR, M)
     rv = circshift(rv, 1)
     return rv
 end
 
 function applyhc(z, FL::AbstractVector, FR::AbstractVector)
-    rv = map(copy, circshift(z, -1))
+    rv = map(similar, circshift(z, -1))
     applyhc!.(rv, z, FL, FR)
     rv = circshift(rv, 1)
     return rv
@@ -220,14 +246,14 @@ function updateleft!(al::AbstractTensorMap, ac::AbstractTensorMap, c::AbstractTe
     normalize!(rac)
     normalize!(rc)
 
-    mulbond!(al, qac, permute((qc'), (), (2, 1)))
+    mulbond!(al, qac, permute((qc'), ((), (2, 1))))
     errL = norm(rac - rc)
 
     return errL
 end
 
-function updateleft!(A::MPS)
-    AL, C, _, AC = unpack(A)
+function updateleft!(mps::MPS)
+    AL, C, _, AC = mps
     errL = updateleft!.(AL, AC, C)
     return errL
 end
@@ -239,14 +265,14 @@ function updateright!(ar::AbstractTensorMap, ac::AbstractTensorMap, c::AbstractT
     normalize!(lac)
     normalize!(lc)
 
-    mulbond!(ar, permute((qc'), (), (2, 1)), qac)
+    mulbond!(ar, permute((qc'), ((), (2, 1))), qac)
     errR = norm(lac - lc)
 
     return errR
 end
 
-function updateright!(A::MPS)
-    _, C, AR, AC = unpack(A)
+function updateright!(mps::MPS)
+    _, C, AR, AC = mps
     errR = updateright!.(AR, AC, circshift(C, (1, 0)))
     return errR
 end
@@ -257,18 +283,27 @@ function updateboth!(A::MPS)
     return A, errL, errR
 end
 
-function contract(vumps::VUMPSRuntime, network, i1::UnitRange, i2::UnitRange)
-    if length(i2) > 1
-        throw(
-            ArgumentError(
-                "Cannot contract a VUMPS boundary around more than one vertical tensor."
-            ),
-        )
-    else
-        i2 = i2[begin]
-    end
+function _contract(network_top, network_bot, vumps::VUMPSRuntime, i1, i2)
+    FL, FR, ACU, ARU, ACD, ARD = vumpsboundary(vumps, i1, i2)
+    return _contractall(FL, FR, ACU, ARU, ACD, ARD, network_top, network_bot)
+end
+function _contract(network, vumps::VUMPSRuntime, i1, i2)
+    FL, FR, ACU, ARU, ACD, ARD = vumpsboundary(vumps, i1, i2)
+    return _contractall(FL, FR, ACU, ARU, ACD, ARD, network)
+end
 
-    _, _, AR, AC = unpack(vumps.mps)
+function vumpsboundary(vumps::VUMPSRuntime, i1, i2)
+    if length(i2) > 1
+        throw(ArgumentError(
+            "
+            can only contract `network` across a single row using VUMPS environment. To contract 
+            across a column, compute a new environment on `permutedims(network)`.
+            "
+        ))
+    else
+         i2 = i2[begin]
+    end
+    _, _, AR, AC = vumps.mps
 
     fixed_points = vumps.fixedpoints
 
@@ -284,7 +319,7 @@ function contract(vumps::VUMPSRuntime, network, i1::UnitRange, i2::UnitRange)
     ARU = tuple((AR[i, i2] for i in (l + 1):r)...)
     ARD = tuple((AR[i, i2 + 1]' for i in (l + 1):r)...)
 
-    return _contractall(FL, FR, ACU, ARU, ACD, ARD, network[i1, i2])
+    return FL, FR, ACU, ARU, ACD, ARD
 end
 
 ### TESTING TODO: DELETE

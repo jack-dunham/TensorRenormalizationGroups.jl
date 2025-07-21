@@ -1,7 +1,13 @@
 # DONE (NEEDS RESTRUCTURING)
 abstract type AbstractFixedPoints end
 
-# Fixed points of a transfer matrix
+"""
+$(TYPEDEF)
+
+Left and right fixed points of the transfer matrix formed from each row-to-row transfer
+matrix sandwiched between the a boundary MPS and it's adjoint. This struct has two fields
+`:left` and `:right` which can be accessed directly.
+"""
 struct FixedPoints{A<:AbUnCe{<:TenAbs{2}}} <: AbstractFixedPoints
     left::A
     right::A
@@ -18,6 +24,16 @@ function FixedPoints(f, mps::MPS, network::AbstractNetwork)
     right = initright.(f, mps_tensor, network)
 
     return FixedPoints(left, right)
+end
+
+function Base.iterate(ct::FixedPoints, state=1)
+    if state == 1
+        return ct.left, state + 1
+    elseif state == 1
+        return ct.right, state + 1
+    elseif state > 2
+        return nothing
+    end
 end
 
 Base.similar(fps::FixedPoints) = FixedPoints(similar(fps.left), similar(fps.right))
@@ -40,7 +56,7 @@ function initfixedpoint(f, mps, bulk, leftright::Symbol)
     cod = virtualspace(bulk, bulkind)
     dom = domain(mps)[mpsind]' * domain(mps)[mpsind]
 
-    return TensorMap(f, promote_type(scalartype(mps), scalartype(bulk)), cod, dom)
+    return f(promote_type(scalartype(mps), scalartype(bulk)), cod, dom)
 end
 
 function renorm(cb, ca, fl, fr)
@@ -71,6 +87,13 @@ end
 #     @tensoropt hc[dr dl] = cu[ur ul] * fl[m1 m2; ul dl] * fr[m1 m2; ur dr] * conj(cd[dr dl])
 # end
 
+"""
+    $(FUNCTIONNAME)(mps::MPS, network::AbstractUnitCell [,f0::FixedPoints]) -> FixedPoints
+
+Compute the left and right fixed points of the transfer matrix defined by sandwiching each
+row of `network` between `mps` and it's `adjoint`. If `f0` is provided, use it as an initial
+guess.
+"""
 function fixedpoints(mps::MPS, network, f0=FixedPoints(rand, mps, network))
     return fixedpoints!(f0, mps, network)
 end
@@ -83,7 +106,7 @@ function fixedpoints!(
     network;
     ishermitian=forcehermitian(fpoints, mps, network),
 )
-    AL, C, AR, _ = unpack(mps)
+    AL, C, AR, _ = mps
 
     # TransferMatrix(AL[1, 1], network[1, 1], AL[1, 1])
 
@@ -105,24 +128,12 @@ function fixedpoints!(
 
     Nx, Ny = size(C)
 
-    for y in 1:Ny
+    for y in axes(eachindex(C), 2)
         left, Ls, linfo = eigsolve(
-            z -> leftsolve(z, tm_left[:, y]),
-            FL[1, y],
-            1,
-            :LM;
-            ishermitian=ishermitian,
-            eager=true,
-            maxiter=1,
+            z -> leftsolve(z, tm_left[:, y]), FL[1, y], 1, :LM; eager=true
         )
         right, Rs, rinfo = eigsolve(
-            z -> rightsolve(z, tm_right[:, y]),
-            FR[Nx, y],
-            1,
-            :LM;
-            ishermitian=ishermitian,
-            eager=true,
-            maxiter=1,
+            z -> rightsolve(z, tm_right[:, y]), FR[Nx, y], 1, :LM; eager=true
         )
 
         FL[1, y] = Ls[1]
@@ -194,18 +205,28 @@ function normalize_fixed_points!(FL, FR, C1, C2)
 end
 # FL[x] * T[x] = FL[x + 1]
 function leftsolve(f0, Ts)
-    f_new = f0
+    fnew = f0
+
     for T in Ts
-        f_new = f_new * T
+        cod, dom = rightspace(T)
+        fold = fnew
+        fnew = similar(fnew, cod, dom)
+        multransfer!(fnew, fold, T)
     end
-    return f_new
+
+    return fnew
 end
 function rightsolve(f0, Ts)
-    f_new = f0
+    fnew = f0
+
     for T in reverse(Ts)
-        f_new = T * f_new
+        cod, dom = leftspace(T)
+        fold = fnew
+        fnew = similar(fnew, cod, dom)
+        multransfer!(fnew, T, fold)
     end
-    return f_new
+
+    return fnew
 end
 
 # This needs updated

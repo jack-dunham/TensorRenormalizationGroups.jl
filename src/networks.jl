@@ -17,44 +17,36 @@ invertaxes(network::AbstractNetwork) = invertaxes.(network)
 ## INTERFACE
 
 """
-    virtualspace(t, [dir::Integer])
+    $(FUNCTIONNAME)(tensor, [dir::Integer])
 
-Return an `NTuple{4,<:VectorSpace}` containing the east, south, west, and north vector spaces associated with the respective
-bonds, in that order. Used to initialise appropriate algorithm tensors. For custom data types, this function must be 
-specified for use in contraction algorithms.
+Return an `NTuple{4,<:VectorSpace}` containing the east, south, west, and north vector 
+spaces associated with the respective bonds, in that order. If `dir` is provided, then
+return the corresponding `VectorSpace` in that tuple.
+!!! note
+    For custom data types, this function must be specified for use in contraction algorithms.
 """
 virtualspace(t::AbsTen{0,4}, dir) = domain(t, dir)
 virtualspace(t) = map(i -> virtualspace(t, i), (1, 2, 3, 4))
 
 """
-    swapaxes(t)
+    $(FUNCTIONNAME)(tensor)
 
-Swap the "x" and the "y" bonds of an object `t`. For custom data types, this function must be specified for use in 
-contraction algorithms.
+Swap the horizontal and the vertical virtual bonds of an object.
+
+!!! note 
+    For custom data types, this function must be specified for use in contraction algorithms.
 """
-function swapaxes end
-
-"""
-    invertaxes(t)
-
-Invert the "x" and the "y" bonds of an object `t`, that is, south ↔ north and east ↔ west. For custom data types, 
-this function must be specified for use in contraction algorithms.
-"""
-function invertaxes end
-
 swapaxes(t::TenAbs{4}) = permutedom(t, (2, 1, 4, 3))
+
+"""
+    $(FUNCTIONNAME)(tensor)
+
+Invert the horizontal and the vertical bonds of an object `t`, that is, south ↔ north and 
+east ↔ west. 
+!!! note
+    For custom data types, this function must be specified for use in contraction algorithms.
+"""
 invertaxes(t::TenAbs{4}) = permutedom(t, (3, 4, 1, 2))
 
+# Deprec
 ensure_contractable(x) = x
-
-"""
-    adjoining_bondspace(network::AbstractUnitCell) -> E, S, W, N
-
-Returns a tuple of the east, south, west, and north bond spaces as unit cells shifted one 
-position in the opposite cardinal direction resepctively. For example, `N[x,y]` is the same 
-as `north(network)[x,y + 1]`.
-"""
-function adjoining_bondspace(network)
-    # east, south, west, north ← bondspace(network)
-    return map(circshift, virtualspace(network), ((1, 0), (0, 1), (-1, 0), (0, -1)))
-end

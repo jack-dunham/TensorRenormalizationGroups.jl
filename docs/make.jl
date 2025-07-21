@@ -1,18 +1,21 @@
-push!(LOAD_PATH, "../src/")
-
 using Documenter
-using InfiniteTensorContractions
+using TensorRenormalizationGroups
 
 makedocs(
-    sitename = "InfiniteTensorContractions.jl",
-    authors = "Jack Dunham",
-    pages = [
+    sitename="TensorRenormalizationGroups.jl",
+    authors="Jack Dunham",
+    pages=[
         "Home" => "index.md",
-        "Library" => "library.md",
+        "Library" => [
+            "Computing and contracting" => "renormalize.md",
+            "Defining tensor networks" => "networks.md",
+            "Algorithms" => "algorithms.md",
+        ],
         "Index" => "_index.md"
     ]
 )
 
 deploydocs(
-    repo = "github.com/jack-dunham/InfiniteTensorContractions.jl.git",
+    repo="github.com/jack-dunham/TensorRenormalizationGroups.jl.git",
+    devbranch="dev",
 )

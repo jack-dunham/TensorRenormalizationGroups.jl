@@ -1,13 +1,43 @@
+"""
+$(TYPEDEF)
+
+Runtime objects containing state of a [`TRG`](@ref) algorithm. 
+The current cumulative value of the contraction can be obtained using the field `:`
+
+# Fields
+
+$(TYPEDFIELDS)
+"""
 struct TRGRuntime{AType,SType} <: AbstractGrainingRuntime
+    "Coarse-grained tensors at the current stage of the algorithms runtime."
     tensors::AType
+    "Singular values used for computing convergence tolerance."
     svals::SType
+    "The current cumulative value of the contraction with respect to each tensor in the unit cell."
     cumsum::Matrix{Float64}
 end
 
-@kwdef struct TRG{T} <: AbstractAlgorithm
+"""
+$(TYPEDEF)
+
+Stores the parameters for the tensor renormalization group (TRG) coarse graining algorithm.
+
+# Fields
+
+$(TYPEDFIELDS)
+
+# Constructor
+
+    $(FUNCTIONNAME)(; trunc, maxiter=20, tol=1e-12, verbose=true)
+"""
+@kwdef struct TRG{T<:TruncationScheme} <: AbstractRenormalizationAlgorithm
+    "The `TruncationScheme` used during the SVD step. See `TensorKit.TruncationScheme` and `TensorKit.tsvd` for more details."
     trunc::T
+    "Maximum number of iterations."
     maxiter::Int = 20
+    "Convergence tolerance."
     tol::Float64 = 1e-12
+    "When `true`, will print algorithm convergence progress."
     verbose::Bool = true
 end
 
@@ -201,9 +231,9 @@ function trgstep!(runtime::TRGRuntime, trunc; ramping=true)
     return traces, allconv
 end
 
-function step!(problem::RenormalizationProblem{<:TRG})
+function step!(problem::Renormalization{<:TRG})
     runtime = problem.runtime
-    alg = problem.algorithm
+    alg = problem.alg
 
     p = 1 + problem.info.iterations
 

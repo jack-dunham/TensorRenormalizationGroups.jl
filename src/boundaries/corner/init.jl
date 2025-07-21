@@ -17,7 +17,8 @@ function updatenetwork!(runtime::CornerMethodRuntime, network)
     updatenetwork!(runtime.permuted, permutedims(swapaxes(network)))
     map(runtime.svals) do sval
         broadcast(sval) do s
-            one!(s)
+            copy!(s, isometry(codomain(s), domain(s)))
+            # one!(s)
         end
     end
     return runtime
@@ -50,13 +51,13 @@ function initpermuted(tensors::CornerMethodTensors)
 
     # Then permute the indices of each tensor on the lattice:
     cs = map(transposed_corners) do c
-        broadcast(c) do t
-            return permute(t, ((), (2, 1)))
+        return broadcast(c) do t
+            return permutedom(t, (2, 1))
         end
     end
 
     # The order of the tensors needs adjusted such that they appear in the correct place
-    corners = Corners(cs[1], cs[4], cs[3], cs[2])
+    corners = Corners((cs[1], cs[4], cs[3], cs[2]))
     edges = Edges(reverse(transposed_edges))
 
     # Need to swap the axes bonds and transpose the network
@@ -70,16 +71,21 @@ end
 
 ## CORNERS 
 
-function initcorners(network, chi::S; randinit::Bool=false) where {S<:IndexSpace}
-    corner_tensors = map(1:4) do i
-        chis = (chi, chi', chi, chi')
+function initcorners(
+    network::UnitCell{G}, chi::S; randinit::Bool=false
+) where {G,S<:IndexSpace}
+    TType = tensormaptype(S, 0, 2, scalartype(network))
 
+    UType = UnitCell{G,TType,Matrix{TType}}
+
+    chis = (chi, chi', chi, chi')
+    corner_tensors = map((1, 2, 3, 4)) do i
         corners = broadcast(network) do site
             T = scalartype(network)
             cout = TensorMap{T}(undef, one(S), chis[i] * chis[i])
 
             if randinit
-                randnt!(cout)
+                randn!(cout)
             else
                 tenp = rotate(site, -i + 1)
                 init_single_corner!(cout, tenp)
@@ -91,23 +97,18 @@ function initcorners(network, chi::S; randinit::Bool=false) where {S<:IndexSpace
         return corners
     end
 
-    corners = Corners(corner_tensors...)
+    corners = Corners(corner_tensors)
 
-    return randomize_if_zero!(corners)
+    return randomize_if_zero!(corners)::Corners{UType}
 end
 function init_single_corner!(cout, ten::AbstractTensorMap{T,S}) where {T,S}
     d = virtualspace(ten)
 
-    # u1 = get_embedding_isometry(d[1], domain(cout)[1])
-    u1 = id(d[1])
-
-    # u2 = get_embedding_isometry(d[2], domain(cout)[2])
-    u2 = id(d[2])
+    u1 = get_embedding_isometry(d[1], domain(cout)[1])
+    u2 = get_embedding_isometry(d[2], domain(cout)[2])
 
     u3 = get_removal_isometry(d[3])
     u4 = get_removal_isometry(d[4])
-
-    cout = similar(ten, one(S), d[1] * d[2])
 
     corner = init_single_corner!(cout, ten, u1, u2, u3, u4)
 
@@ -159,22 +160,28 @@ end
 
 ## EDGES
 
-function initedges(network, chi::IndexSpace; randinit::Bool=false)
-    edge_tensors = map(1:4) do i
-        edges = broadcast(network) do site
+function edgetype(network::AbstractUnitCell{G,<:CompositeTensor{2}}, chi) where {G}
+    return tensormaptype(typeof(chi), 2, 2, scalartype(network))
+end
+function edgetype(network::AbstractUnitCell{G,<:TensorMap}, chi) where {G}
+    return tensormaptype(typeof(chi), 1, 2, scalartype(network))
+end
+
+function initedges(network::UnitCell{G}, chi::IndexSpace; randinit::Bool=false) where {G}
+    TType = edgetype(network, chi)
+
+    UType = UnitCell{G,TType,Matrix{TType}}
+
+    edge_tensors = map((1, 2, 3, 4)) do i
+        edges = similar(network, TType)
+
+        broadcast!(edges, network) do site
             tenp = rotate(site, -i + 1)
 
-            # Need north bond of tensor below (swapped south bond)
-            d = swap(virtualspace(tenp)[2])
-
-            T = scalartype(site)
-
-            eout = TensorMap{T}(undef, d, chi * chi')
+            eout = init_single_edge(chi * chi', tenp)
 
             if randinit
-                randnt!(eout)
-            else
-                init_single_edge!(eout, tenp)
+                randn!(eout)
             end
 
             normalize!(eout)
@@ -184,84 +191,93 @@ function initedges(network, chi::IndexSpace; randinit::Bool=false)
         return edges
     end
 
-    edges = Edges(edge_tensors...)
+    edges = Edges(edge_tensors)
 
-    return randomize_if_zero!(edges)
+    return randomize_if_zero!(edges)::Edges{UType}
 end
 
-function init_single_edge!(eout, tenp)
+function init_single_edge(dstdom, tenp)
     d = virtualspace(tenp)
 
-    # u1 = get_embedding_isometry(d[1], domain(eout)[1])
-    u1 = id(d[1])
+    u1 = get_embedding_isometry(d[1], dstdom[1])
+    # u1 = id(d[1])
     u2 = isometry(swap(d[2]), swap(d[2]))
-    # u3 = get_embedding_isometry(d[3], domain(eout)[2])
-    u3 = id(d[3])
+    u3 = get_embedding_isometry(d[3], dstdom[2])
+    # u3 = id(d[3])
     u4 = get_removal_isometry(d[4])
 
-    eout = similar(tenp, codomain(u2), d[1] * d[3])
-
-    edge = init_single_edge!(eout, tenp, u1, u2, u3, u4)
+    edge = init_single_edge(tenp, u1, u2, u3, u4)
 
     return edge
 end
 
-function init_single_edge!(t_dst, t_src::CompositeTensor{2}, ue, us, uw, un)
-    top, bot = t_src
-    return __init_single_edge!(t_dst, top, bot, ue, us, uw, un)
+function init_single_edge(tsrc::CompositeTensor{2}, ue, us, uw, un)
+    top, bot = tsrc
+    return __init_single_edge(top, bot, ue, us, uw, un)
 end
-function init_single_edge!(t_dst, t_src::TensorMap, ue, us, uw, un)
-    return __init_single_edge!(t_dst, t_src, ue, us, uw, un)
+function init_single_edge(tsrc::AbsTen{0,4}, ue, us, uw, un)
+    @tensoropt tdst[s; o1 o2] := tsrc[e s w n] * ue[e; o1] * uw[w; o2] * un[n]
+    # @tensoropt t_dst[ss; o1 o2] = t_src[e s w n] * ue[e; o1] * us[ss; s] * uw[w; o2] * un[n]
+    return tdst
 end
-
-function __init_single_edge!(t_dst, t_src::AbsTen{0,4}, ue, us, uw, un)
-    @tensoropt t_dst[ss; o1 o2] = t_src[e s w n] * ue[e; o1] * us[ss; s] * uw[w; o2] * un[n]
-end
-function __init_single_edge!(
-    t_dst, t1::T1, t2::T2, ue, us, uw, un
+function __init_single_edge(
+    t1::T1, t2::T2, ue, us, uw, un
 ) where {T1<:AbsTen{1,4},T2<:AbsTen{4,1}}
-    @tensoropt t_dst[ss1 ss2; o1 o2] =
+    @tensoropt tdst[ss1 ss2; o1 o2] :=
         t1[k; e1 s1 w1 n1] *
         t2[e2 s2 w2 n2; k] *
         ue[e1 e2; o1] *
         us[ss1 ss2; s1 s2] *
         uw[w1 w2; o2] *
         un[n1 n2]
+    return tdst
 end
-function __init_single_edge!(
-    t_dst, t1::T1, t2::T2, ue, us, uw, un
+function __init_single_edge(
+    t1::T1, t2::T2, ue, us, uw, un
 ) where {T1<:AbsTen{2,4},T2<:AbsTen{4,2}}
-    @tensoropt t_dst[ss1 ss2; o1 o2] =
+    @tensoropt tdst[ss1 ss2; o1 o2] :=
         t1[k b; e1 s1 w1 n1] *
         t2[e2 s2 w2 n2; k b] *
         ue[e1 e2; o1] *
         us[ss1 ss2; s1 s2] *
         uw[w1 w2; o2] *
         un[n1 n2]
+    return tdst
 end
 
 ##
 
 ## PROJECTORS
+function projtype(network::AbstractUnitCell{G,<:CompositeTensor{2}}, chi) where {G}
+    return tensormaptype(typeof(chi), 3, 1, scalartype(network))
+end
+function projtype(network::AbstractUnitCell{G,<:TensorMap}, chi) where {G}
+    return tensormaptype(typeof(chi), 2, 1, scalartype(network))
+end
 
 function initprojectors(network, chi::IndexSpace)
     _, south_bonds, _, north_bonds = virtualspace(network)
 
-    T = scalartype(network)
+    UL = similar(network, projtype(network, chi))
+    VL = similar(network, projtype(network, chi))
+    UR = similar(network, projtype(network, chi))
+    VR = similar(network, projtype(network, chi))
 
-    UL = construct_projector(T, adjoint(chi), north_bonds, (-1, -1))
-    VL = construct_projector(T, chi, south_bonds, (-1, 0))
-    UR = construct_projector(T, chi, north_bonds, (1, -1))
-    VR = construct_projector(T, adjoint(chi), south_bonds, (1, 0))
+    construct_projector!(UL, adjoint(chi), north_bonds, (-1, -1))
+    construct_projector!(VL, chi, south_bonds, (-1, 0))
+    construct_projector!(UR, chi, north_bonds, (1, -1))
+    construct_projector!(VR, adjoint(chi), south_bonds, (1, 0))
 
     return Projectors(UL, VL, UR, VR)
 end
 
-function construct_projector(T, chi, sitebonds, incr)
-    rv = broadcast(circshift(sitebonds, incr)) do bonds
+function construct_projector!(ucdst, chi, sitebonds, incr)
+    T = scalartype(ucdst)
+
+    broadcast!(ucdst, circshift(sitebonds, incr)) do bonds
         return TensorMap{T}(undef, chi * bonds, chi)
     end
-    return rv
+    return ucdst
 end
 
 ##
@@ -273,7 +289,7 @@ function initerror(corners::Corners)
     # Permute into some form compatible with tsvd
     svals = map(corners) do corn
         broadcast(corn) do site
-            s =  permute(site, ((1,), (2,)))
+            s = permute(site, ((1,), (2,)))
             return TensorMap(rand, scalartype(s), codomain(s), domain(s))
             # _, rv, _ = tsvd(permute(site, ((1,), (2,))))
             # return rv
@@ -287,8 +303,11 @@ end
 
 ## UTILS
 
-randomize_if_zero!(corners::Corners) = randomize_if_zero!(corners, :C)
-randomize_if_zero!(edges::Edges) = randomize_if_zero!(edges, :T)
+randomize_if_zero!(corners::C) where {C<:Corners} = randomize_if_zero!(corners, :C)::C
+function randomize_if_zero!(edges::E) where {E<:Edges}
+    randomize_if_zero!(edges, :T)
+    return edges
+end
 
 function randomize_if_zero!(corners_or_edges, type::Symbol)
     for (i, c_or_e) in enumerate(corners_or_edges)
@@ -301,7 +320,7 @@ function randomize_if_zero!(uc, type, i, ind)
     ten = uc[ind]
     if ten ≈ zero(ten) || isnan(norm(ten)) || isinf(norm(ten))
         @info "Ill-conditioned tensor $type$i at site $(Tuple(ind)); using a random tensor instead."
-        randnt!(ten)
+        randn!(ten)
     end
     return uc
 end
