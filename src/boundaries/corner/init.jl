@@ -17,7 +17,7 @@ function updatenetwork!(runtime::CornerMethodRuntime, network)
     updatenetwork!(runtime.permuted, permutedims(swapaxes(network)))
     map(runtime.svals) do sval
         broadcast(sval) do s
-            copy!(s, isometry(codomain(s), domain(s)))
+            return copy!(s, isometry(codomain(s), domain(s)))
             # one!(s)
         end
     end
@@ -26,7 +26,7 @@ end
 
 function updatenetwork!(tensors::CornerMethodTensors, network)
     foreach(tensors.network, network) do t1, t2
-        copy!(t1, t2)
+        return copy!(t1, t2)
     end
     return tensors
 end
@@ -63,13 +63,13 @@ function initpermuted(tensors::CornerMethodTensors)
     # Need to swap the axes bonds and transpose the network
     network = permutedims(swapaxes(tensors.network))
 
-    # Projectors are easiest to construct assuming a transposed and permuted unit cell 
+    # Projectors are easiest to construct assuming a transposed and permuted unit cell
     projectors = initprojectors(network, chi)
 
     return CornerMethodTensors(corners, edges, projectors, network)
 end
 
-## CORNERS 
+## CORNERS
 
 function initcorners(
     network::UnitCell{G}, chi::S; randinit::Bool=false
@@ -290,7 +290,7 @@ function initerror(corners::Corners)
     svals = map(corners) do corn
         broadcast(corn) do site
             s = permute(site, ((1,), (2,)))
-            return TensorMap(rand, scalartype(s), codomain(s), domain(s))
+            return TensorMap(ones, scalartype(s), codomain(s), domain(s))
             # _, rv, _ = tsvd(permute(site, ((1,), (2,))))
             # return rv
         end

@@ -1,6 +1,6 @@
 @testsetup module SetupIsing
-using Reexport
 using Random
+using Reexport
 @reexport using TensorKit, TensorRenormalizationGroups, TestExtras
 
 Random.seed!(1234)
@@ -74,8 +74,8 @@ function isingnetwork(::Type{G}, ::Type{T}, β, N) where {G,T}
     for y in axes(Z, 2)
         for x in axes(Z, 1)
             A, _, _ = tsvd(randn(T, s, s))
-            randgauge!(Z, x, y, one(A) + 1e-1 * A)
-            randgauge!(M, x, y, one(A) + 1e-1 * A)
+            randgauge!(Z, x, y, one(A) + 1.0e-1 * A)
+            randgauge!(M, x, y, one(A) + 1.0e-1 * A)
         end
     end
 
@@ -102,7 +102,10 @@ using Random
 export CZ1L
 
 function testpeps(x)
+    βc = log(1 + sqrt(2)) / 2
     β = x * log(1 + sqrt(2)) / 2
+
+    exact_M = abs((1 - sinh(2 * x * βc)^(-4)))^(1 / 8)
 
     Z = TensorMap(ComplexF64[1 0; 0 -1], ℂ^2, ℂ^2)
     X = TensorMap(Float64[0 1; 1 0], ℂ^2, ℂ^2)
@@ -136,13 +139,10 @@ function testpeps(x)
     netZ = UnitCell(fill(hsmZ, 1, 1))
 
     alg = VUMPS(; maxiter=100, bonddim=50)
-    # alg = CTMRG(; maxiter=1000, tol=1e-10, svdalg=TensorKit.SVD(), bonddim=50)
+    # alg = CTMRG(; maxiter = 1000, tol = 1.0e-10, svdalg = TensorKit.SVD(), bonddim = 50)
     rt = Renormalization(net, alg)
 
     renormalize!(rt)
-    norm = contract(net, rt.runtime)[1, 1]
-
-    magn_ss = contract(netZ, rt.runtime)[1, 1] / norm
 
     rv = []
 
@@ -152,7 +152,7 @@ function testpeps(x)
         magn = contract([hsmZ, bulk..., hsmZ], rt.runtime, 1:l, 1:1)
         magn_norm = contract([hsm, bulk..., hsm], rt.runtime, 1:l, 1:1)
 
-        push!(rv, magn / magn_norm - magn_ss^2)
+        push!(rv, magn / magn_norm)
     end
 
     return rv
@@ -168,8 +168,10 @@ end # SetupIsingPEPS
     M = abs((1 - sinh(2 * x * βc)^(-4)))^(1 / 8)
 
     algs = (
-        VUMPS(; verbose=true, maxiter=1000, tol=1e-10, bonddim=20),
-        CTMRG(; verbose=true, maxiter=1000, tol=1e-10, svdalg=TensorKit.SVD(), bonddim=20),
+        VUMPS(; verbose=true, maxiter=1000, tol=1.0e-10, bonddim=20),
+        CTMRG(;
+            verbose=true, maxiter=1000, tol=1.0e-10, svdalg=TensorKit.SVD(), bonddim=20
+        ),
     )
 
     @testset "Geometry $G" for G in (Square, SquareSymmetric)
@@ -187,7 +189,7 @@ end # SetupIsingPEPS
 
                 for y in 1:N
                     for x in 1:N
-                        @test abs(m_val[x, y]) ≈ M atol = 1e-10
+                        @test abs(m_val[x, y]) ≈ M atol = 1.0e-10
                     end
                 end
             end
@@ -208,7 +210,7 @@ end # SetupIsingPEPS
 
                 for y in 1:N
                     for x in 1:N
-                        @test abs(z_val[x, y]) ≈ z_exact atol = 1e-4
+                        @test abs(z_val[x, y]) ≈ z_exact atol = 1.0e-4
                     end
                 end
             end
@@ -236,47 +238,67 @@ end
     @tensoropt state[out; e s w n] :=
         E[out x4; e] * S[x4 x3; s] * W[w; x3 x2] * N[n; x2 x1] * plus[x1]
 
-    size = 1
+    function randgauge_peps!(net, x, y, X)
+        p1 = net[x, y]
+        p2 = net[x + 1, y]
 
-    net = UnitCell(fill(CompositeTensor(state, state'), size, size))
-    netZ = UnitCell(fill(CompositeTensor(state, (Z * state)'), size, size))
+        @tensoropt p1[out; a b c d] = copy(p1)[out; aa b c d] * X[aa; a]
+        @tensoropt p2[out; a b c d] = copy(p2)[out; a b cc d] * inv(X)[c; cc]
+
+        return nothing
+    end
+
+    size = 2
 
     algs = (
-        VUMPS(; maxiter=1000, tol=1e-10, bonddim=50),
-        CTMRG(; maxiter=1000, tol=1e-10, svdalg=TensorKit.SVD(), bonddim=50),
+        VUMPS(; maxiter=1000, tol=1.0e-10, bonddim=50),
+        CTMRG(; maxiter=1000, tol=1.0e-9, svdalg=TensorKit.SVD(), bonddim=50),
     )
 
-    @testset "Using $(typeof(alg))" for alg in algs
-        rt = Renormalization(net, alg)
+    @testset "Geometry $G" for G in (Square, SquareSymmetric)
+        net_state = UnitCell{G}(fill(state, size, size))
 
-        renormalize!(rt)
-
-        norm = contract(net, rt)[1, 1]
-        magn_ss = contract(netZ, rt)[1, 1] / norm
-
-        @info alg norm
-        @test abs(magn_ss) ≈ exact_M atol = 1e-10
-
-        # magn_ss = 1
-
-        rv = []
-
-        for l in 2:10
-            bulk = fill(state, l - 2)
-
-            ops = [Z * state, bulk..., Z * state]
-            bare_ops = [state, bulk..., state]
-
-            magn_in = map(CompositeTensor, bare_ops, adjoint.(ops))
-            magn_norm_in = map(CompositeTensor, bare_ops, adjoint.(bare_ops))
-
-            magn = contract(magn_in, rt.runtime, 1:l, 1)
-            magn_norm = contract(magn_norm_in, rt.runtime, 1:l, 1)
-
-            push!(rv, magn / magn_norm - magn_ss^2)
+        for y in axes(net_state, 2)
+            for x in axes(net_state, 1)
+                A, _, _ = tsvd(randn(eltype(state), ComplexSpace(2), ComplexSpace(2)))
+                randgauge_peps!(net_state, x, y, one(A) + 1.0e-1 * A)
+            end
         end
 
-        @test rv ≈ CZ1L
+        net = map(CompositeTensor, net_state, adjoint.(net_state))
+        netZ = map(CompositeTensor, net_state, adjoint.(Ref(Z) .* net_state))
+
+        @testset "Using $(typeof(alg))" for alg in algs
+            rt = Renormalization(net, alg)
+
+            renormalize!(rt)
+
+            norm = contract(net, rt)[1, 1]
+            magn_ss = contract(netZ, rt)[1, 1] / norm
+
+            @test abs(magn_ss) ≈ exact_M atol = 1.0e-10
+
+            # magn_ss = 1
+
+            rv = []
+
+            for l in 2:10
+                bulk = fill(state, l - 2)
+
+                ops = [Z * state, bulk..., Z * state]
+                bare_ops = [state, bulk..., state]
+
+                magn_in = map(CompositeTensor, bare_ops, adjoint.(ops))
+                magn_norm_in = map(CompositeTensor, bare_ops, adjoint.(bare_ops))
+
+                magn = contract(magn_in, rt.runtime, 1:l, 1)
+                magn_norm = contract(magn_norm_in, rt.runtime, 1:l, 1)
+
+                push!(rv, magn / magn_norm)
+            end
+
+            @test rv ≈ CZ1L
+        end
     end
 end
 #=

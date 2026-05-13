@@ -124,6 +124,5 @@ end
         # Should get zero error with corners unchanged:
         C1, C2, C3, C4 = corn
         @test @constinferred(TRGroups.boundaryerror!(Ss[1], C1)) ≈ zero.(eltype.(C1))
-
     end
 end

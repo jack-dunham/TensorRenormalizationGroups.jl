@@ -1,7 +1,7 @@
 using Documenter
 using TensorRenormalizationGroups
 
-makedocs(
+makedocs(;
     sitename="TensorRenormalizationGroups.jl",
     authors="Jack Dunham",
     pages=[
@@ -11,11 +11,10 @@ makedocs(
             "Defining tensor networks" => "networks.md",
             "Algorithms" => "algorithms.md",
         ],
-        "Index" => "_index.md"
-    ]
+        "Index" => "_index.md",
+    ],
 )
 
-deploydocs(
-    repo="github.com/jack-dunham/TensorRenormalizationGroups.jl.git",
-    devbranch="dev",
+deploydocs(;
+    repo="github.com/jack-dunham/TensorRenormalizationGroups.jl.git", devbranch="dev"
 )

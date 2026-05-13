@@ -44,15 +44,10 @@ $(TYPEDEF)
 
 $(TYPEDFIELDS)
 """
-struct VUMPSRuntime{
-    G,
-    AType,
-    CType,
-    FType<:AbstractUnitCell,
-    SType<:AbstractUnitCell,
-} <: AbstractBoundaryRuntime
+struct VUMPSRuntime{G,AType,CType,FType<:AbstractUnitCell,SType<:AbstractUnitCell} <:
+       AbstractBoundaryRuntime
     "The boundary matrix product state (MPS)"
-    mps::MPS{G, AType,CType}
+    mps::MPS{G,AType,CType}
     "Left and right fixed points of the transfer matrix"
     fixedpoints::FixedPoints{FType}
     "Singular values used to compute the convergence measure"
@@ -196,9 +191,9 @@ function vumpsupdate!(A::MPS, FP::FixedPoints, M; ishermitian=forcehermitian(A, 
 
         # @info "" μ0s
 
-        @debug "Individual effective Hamiltonian eigenvalues:" μ1 = μ1s[1] μ0 = μ0s[1] μ1 /
-                                                                                       μ0 =
-            (μ1s[1] / μ0s[1])
+        @debug "Individual effective Hamiltonian eigenvalues:" μ1 = μ1s[1] μ0 = μ0s[1] μ1 / μ0 = (
+            μ1s[1] / μ0s[1]
+        )
 
         for y in axes(eachindex(C), 1)
             C[x, y] = Cs[1][y]
@@ -294,14 +289,16 @@ end
 
 function vumpsboundary(vumps::VUMPSRuntime, i1, i2)
     if length(i2) > 1
-        throw(ArgumentError(
-            "
-            can only contract `network` across a single row using VUMPS environment. To contract 
-            across a column, compute a new environment on `permutedims(network)`.
-            "
-        ))
+        throw(
+            ArgumentError(
+                "
+                can only contract `network` across a single row using VUMPS environment. To contract 
+                across a column, compute a new environment on `permutedims(network)`.
+                ",
+            ),
+        )
     else
-         i2 = i2[begin]
+        i2 = i2[begin]
     end
     _, _, AR, AC = vumps.mps
 

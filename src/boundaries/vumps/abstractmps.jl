@@ -24,16 +24,16 @@ C
 ```
 
 """
-struct MPS{G, AType<:TenAbs{2}, CType<:AbsTen{0,2}} <: AbstractMPS
-    AL::UnitCell{G, AType, Matrix{AType}}
-    C::UnitCell{G, CType, Matrix{CType}}
-    AR::UnitCell{G, AType, Matrix{AType}}
-    AC::UnitCell{G, AType, Matrix{AType}}
+struct MPS{G,AType<:TenAbs{2},CType<:AbsTen{0,2}} <: AbstractMPS
+    AL::UnitCell{G,AType,Matrix{AType}}
+    C::UnitCell{G,CType,Matrix{CType}}
+    AR::UnitCell{G,AType,Matrix{AType}}
+    AC::UnitCell{G,AType,Matrix{AType}}
     function MPS(
         AL::UA, C::UC, AR::UA, AC::UA
-    ) where {G, AType, UA<:AbstractUnitCell{G, AType},CType, UC<:AbstractUnitCell{G, CType}}
+    ) where {G,AType,UA<:AbstractUnitCell{G,AType},CType,UC<:AbstractUnitCell{G,CType}}
         check_size_allequal(AL, C, AR, AC)
-        mps = new{G, AType,CType}(AL, C, AR, AC)
+        mps = new{G,AType,CType}(AL, C, AR, AC)
         validate(mps)
         return mps
     end
@@ -54,8 +54,8 @@ getcentral(mps::MPS) = mps.AC
 
 unpack(mps::AbstractMPS) = (getleft(mps), getbond(mps), getright(mps), getcentral(mps))
 
-function TensorKit.scalartype(mps::MPS{G, AType, CType}) where {G, AType, CType}
-    return promote_type(scalartype(AType),scalartype(AType))
+function TensorKit.scalartype(mps::MPS{G,AType,CType}) where {G,AType,CType}
+    return promote_type(scalartype(AType), scalartype(AType))
 end
 
 # BASE
@@ -115,7 +115,9 @@ end
 
 # CONSTRUCTORS
 
-function MPS(f, T::Type{<:Number}, physbonds::AbstractUnitCell, rightbonds::AbstractUnitCell)
+function MPS(
+    f, T::Type{<:Number}, physbonds::AbstractUnitCell, rightbonds::AbstractUnitCell
+)
     leftbonds = circshift(rightbonds, (1, 0))
     data_lat = @. f(T, physbonds, rightbonds * adjoint(leftbonds))
     return MPS(data_lat)

@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Stores the parameters for the corner transfer matrix  renormalization group (CTMRG) 
+Stores the parameters for the corner transfer matrix  renormalization group (CTMRG)
 boundary algorithm.
 
 # Fields
@@ -18,11 +18,11 @@ $(TYPEDFIELDS)
     "Maximum number of iterations."
     maxiter::Int = 100
     "Convergence tolerance."
-    tol::Float64 = 1e-12
+    tol::Float64 = 1.0e-12
     "When `true`, will print algorithm convergence progress."
     verbose::Bool = true
     "Tolerance used in the pseudoinverse."
-    ptol::Float64 = 5e-8
+    ptol::Float64 = 5.0e-8
     "Algorithm used for the SVD. Either `TensorKit.SVD()` or `TensorKit.SDD()`."
     svdalg::SVD = TensorKit.SVD()
     "If `true`, intialize with random tensors."
@@ -78,7 +78,7 @@ function projectors(
     # Top
     top = halfcontract(C1_00, T1_10, T1_20, C2_30, T4_01, M_11, M_21, T2_31)
     # println(top)
-    U, S, V = tsvd!(normalize!(top); alg=svd_alg)
+    U, S, V = tsvd!(top; alg=svd_alg)
     FUL = sqrt(S) * V
     FUR = U * sqrt(S)
 
@@ -87,7 +87,7 @@ function projectors(
     MP_22 = invertaxes(M_22)
 
     bot = halfcontract(C3_33, T3_23, T3_13, C4_03, T2_32, MP_22, MP_12, T4_02)
-    U, S, V = tsvd!(normalize!(bot); alg=svd_alg)
+    U, S, V = tsvd!(bot; alg=svd_alg)
     FDL = U * sqrt(S)
     FDR = sqrt(S) * V
 
@@ -97,7 +97,7 @@ function projectors(
     return UL, VL, UR, VR
 end
 
-function biorth_truncation(U0, V0, xi; ptol=5e-8, svd_alg=TensorKit.SVD())
+function biorth_truncation(U0, V0, xi; ptol=5.0e-8, svd_alg=TensorKit.SVD())
     Q, S, W = tsvd!(U0 * V0; trunc=truncdim(xi), alg=svd_alg)
 
     # normalize!(S)
@@ -322,7 +322,7 @@ function testctmrg(data_func; T=Float64, D=10)
         bonddim=D,
         verbose=true,
         maxiter=1000,
-        tol=1e-10,
+        tol=1.0e-10,
         svdalg=TensorKit.SVD(),
         randinit=false,
     )
@@ -350,8 +350,8 @@ function testctmrg(data_func; T=Float64, D=10)
         for y in axes(b1, 2)
             for x in axes(b1, 1)
                 A, _, _ = tsvd(randn(T, s, s))
-                randgauge!(b1, x, y, one(A) + 1e-1 * A)
-                randgauge!(b2, x, y, one(A) + 1e-1 * A)
+                randgauge!(b1, x, y, one(A) + 1.0e-1 * A)
+                randgauge!(b2, x, y, one(A) + 1.0e-1 * A)
             end
         end
 
@@ -365,7 +365,7 @@ function testctmrg(data_func; T=Float64, D=10)
 
         cb = (st, args...) -> println(contract(st.tensors, b2) ./ contract(st.tensors, b1))
 
-        state = Renormalization(b1, alg)#; callback=cb)
+        state = Renormalization(b1, alg) #; callback=cb)
 
         did_converge = false
 
@@ -436,7 +436,7 @@ function toric(p)
         bonddim=50,
         verbose=true,
         maxiter=500,
-        tol=1e-10,
+        tol=1.0e-10,
         svdalg=TensorKit.SVD(),
         randinit=false,
     )
@@ -503,7 +503,7 @@ function dimer(D; el=Float64)
         AD = TensorMap(aad, one(s), s * s * s' * s')
         BD = TensorMap(bbd, one(s), s * s * s' * s')
 
-        alg = CTMRG(; bonddim=D, maxiter=149, tol=1e-11, randinit=false)
+        alg = CTMRG(; bonddim=D, maxiter=149, tol=1.0e-11, randinit=false)
         # alg = VUMPS(; bonddim=D, maxiter=1000)
 
         bulk = UnitCell([A B; B A])
